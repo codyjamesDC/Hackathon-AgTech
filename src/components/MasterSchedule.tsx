@@ -15,6 +15,7 @@ type EquipmentType = "all" | "heavy" | "light";
 
 interface ScheduleEntry {
   time: string;
+  timeSlot: string;
   farmer: string;
   equipment: string;
   status: Status;
@@ -22,9 +23,9 @@ interface ScheduleEntry {
 }
 
 const schedule: ScheduleEntry[] = [
-  { time: "06:00 AM", farmer: "JUAN", equipment: "4-Wheel Tractor", status: "In Field", type: "heavy" },
-  { time: "08:30 AM", farmer: "MARIA", equipment: "Water Pump #02", status: "Queued", type: "light" },
-  { time: "10:00 AM", farmer: "PEDRO", equipment: "Hand Tractor", status: "Completed", type: "heavy" },
+  { time: "06:00 AM", timeSlot: "06:00 AM – 05:00 PM (Whole Day)", farmer: "JUAN", equipment: "4-Wheel Tractor", status: "In Field", type: "heavy" },
+  { time: "08:30 AM", timeSlot: "08:30 AM – 12:00 PM", farmer: "MARIA", equipment: "Water Pump #02", status: "Queued", type: "light" },
+  { time: "10:00 AM", timeSlot: "10:00 AM – 02:00 PM", farmer: "PEDRO", equipment: "Hand Tractor", status: "Completed", type: "heavy" },
 ];
 
 const statusStyles: Record<Status, string> = {
@@ -77,6 +78,7 @@ export function MasterSchedule() {
           <thead>
             <tr className="border-b border-border text-muted-foreground">
               <th className="text-left font-medium py-2.5 pr-4">Time</th>
+              <th className="text-left font-medium py-2.5 pr-4">Time Slot</th>
               <th className="text-left font-medium py-2.5 pr-4">Farmer</th>
               <th className="text-left font-medium py-2.5 pr-4">Equipment</th>
               <th className="text-left font-medium py-2.5">Status</th>
@@ -90,6 +92,9 @@ export function MasterSchedule() {
               >
                 <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">
                   {row.time}
+                </td>
+                <td className="py-3 pr-4 font-mono text-xs text-muted-foreground whitespace-nowrap">
+                  {row.timeSlot}
                 </td>
                 <td className="py-3 pr-4 font-semibold">{row.farmer}</td>
                 <td className="py-3 pr-4">{row.equipment}</td>
@@ -105,7 +110,7 @@ export function MasterSchedule() {
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={4} className="py-8 text-center text-muted-foreground text-sm">
+                <td colSpan={5} className="py-8 text-center text-muted-foreground text-sm">
                   No matching schedule entries found.
                 </td>
               </tr>
