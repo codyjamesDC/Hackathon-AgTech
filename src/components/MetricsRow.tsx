@@ -16,9 +16,9 @@ const sparkData = {
 const metrics = [
   {
     title: "Active Rentals Today",
-    value: "12",
+    value: "14",
     icon: Tractor,
-    change: "+3 from yesterday",
+    change: "+4 from yesterday",
     variant: "default" as const,
     spark: sparkData.rentals,
     sparkColor: "hsl(var(--primary))",

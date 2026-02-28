@@ -9,34 +9,28 @@ interface SmsMessage {
 
 const messages: SmsMessage[] = [
   {
-    sender: "0919-XXX-1234",
-    content: "END TRACTOR",
+    sender: "System",
+    content: "✅ Confirmed! Tractor booked for JUAN on 03-05. Operator Jun arrives at 6AM. Text KANSELA TRACTOR 03-05 if plans change.",
     time: "Just now",
-    type: "incoming",
+    type: "system",
   },
   {
-    sender: "0966-XXX-9876",
-    content: "HIRAM PEDRO PUMP 03-01 2PM",
-    time: "2 mins ago",
+    sender: "0919-XXX-1234",
+    content: "Yes",
+    time: "1 min ago",
     type: "incoming",
   },
   {
     sender: "System",
-    content: "✅ Confirmed! PUMP booked for PEDRO — 03-01 from 2:00 PM to 6:00 PM.",
+    content: "Tractor is available for JUAN on 03-05. Time: Whole Day (6AM-5PM). Reply YES to confirm booking.",
     time: "2 mins ago",
     type: "system",
   },
   {
-    sender: "0917-XXX-5678",
-    content: "STATUS PEDRO",
-    time: "8 mins ago",
+    sender: "0919-XXX-1234",
+    content: "RENT JUAN TRACTOR 03-05",
+    time: "2 mins ago",
     type: "incoming",
-  },
-  {
-    sender: "System",
-    content: "📋 PEDRO — Hand Tractor, today 10:00 AM – 02:00 PM. You are #3 in queue.",
-    time: "8 mins ago",
-    type: "system",
   },
 ];
 
