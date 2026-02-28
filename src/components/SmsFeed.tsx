@@ -49,7 +49,7 @@ export function SmsFeed() {
       </div>
       <div className="space-y-3 flex-1">
         {messages.map((msg, i) => (
-          <div key={i} className="flex flex-col gap-1">
+          <div key={i} className="flex flex-col gap-1 rounded-lg p-2 -mx-2 transition-all duration-150 hover:bg-muted/50 hover:shadow-md cursor-pointer">
             <div className="flex items-center justify-between">
               <span
                 className={`text-xs font-semibold ${
