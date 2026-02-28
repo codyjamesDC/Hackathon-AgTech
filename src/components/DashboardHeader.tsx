@@ -1,12 +1,7 @@
 import { CalendarDays, User } from "lucide-react";
 
 export function DashboardHeader() {
-  const today = new Date().toLocaleDateString("en-US", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const today = "Thursday, March 5, 2026";
 
   return (
     <header className="flex items-center justify-between bg-card px-6 py-4 border-b border-border">

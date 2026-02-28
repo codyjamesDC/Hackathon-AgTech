@@ -39,7 +39,8 @@ interface ScheduleEntry {
 }
 
 const allEquipment = [
-  "4-Wheel Tractor",
+  "Tractor (Unit 1)",
+  "Tractor (Unit 2)",
   "Hand Tractor",
   "Water Pump #01",
   "Water Pump #02",
@@ -47,10 +48,9 @@ const allEquipment = [
 ];
 
 const initialSchedule: ScheduleEntry[] = [
-  { time: "06:00 AM", timeSlot: "06:00 AM – 05:00 PM (Whole Day)", farmer: "JUAN", equipment: "4-Wheel Tractor", status: "In Field", type: "heavy" },
-  { time: "08:30 AM", timeSlot: "08:30 AM – 12:00 PM", farmer: "MARIA", equipment: "Water Pump #02", status: "Queued", type: "light" },
-  { time: "10:00 AM", timeSlot: "10:00 AM – 02:00 PM", farmer: "PEDRO", equipment: "Hand Tractor", status: "Completed", type: "heavy" },
-  { time: "09:00 AM", timeSlot: "09:00 AM – 01:00 PM", farmer: "ELENA", equipment: "4-Wheel Tractor", status: "Queued", type: "heavy" },
+  { time: "06:00 AM", timeSlot: "06:00 AM – 05:00 PM (Whole Day)", farmer: "JUAN", equipment: "Tractor (Unit 1)", status: "In Field", type: "heavy" },
+  { time: "08:00 AM", timeSlot: "08:00 AM – 12:00 PM", farmer: "MARIA", equipment: "Water Pump #01", status: "Queued", type: "light" },
+  { time: "01:00 PM", timeSlot: "01:00 PM – 05:00 PM", farmer: "PEDRO", equipment: "Water Pump #02", status: "Queued", type: "light" },
 ];
 
 const timeOptions = [
@@ -164,7 +164,7 @@ export function MasterSchedule() {
       updated[resolveIdx] = {
         ...entry,
         equipment: newEquipment,
-        type: ["4-Wheel Tractor", "Hand Tractor", "Rice Thresher"].includes(newEquipment) ? "heavy" : "light",
+        type: ["Tractor (Unit 1)", "Tractor (Unit 2)", "Hand Tractor", "Rice Thresher"].includes(newEquipment) ? "heavy" : "light",
       };
       auditEntry = {
         timestamp: new Date(),
