@@ -17,7 +17,7 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Search, AlertTriangle, ArrowRightLeft, Clock } from "lucide-react";
+import { Search, AlertTriangle, ArrowRightLeft, Clock, ScrollText } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -101,10 +101,19 @@ const statusStyles: Record<Status, string> = {
 
 type ResolveMode = "reassign" | "adjust";
 
+interface AuditEntry {
+  timestamp: Date;
+  farmer: string;
+  action: ResolveMode;
+  from: string;
+  to: string;
+}
+
 export function MasterSchedule() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<EquipmentType>("all");
   const [schedule, setSchedule] = useState<ScheduleEntry[]>(initialSchedule);
+  const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
 
   // Resolution dialog state
   const [resolveOpen, setResolveOpen] = useState(false);
@@ -149,11 +158,20 @@ export function MasterSchedule() {
     const entry = schedule[resolveIdx];
     const updated = [...schedule];
 
+    let auditEntry: AuditEntry;
+
     if (resolveMode === "reassign") {
       updated[resolveIdx] = {
         ...entry,
         equipment: newEquipment,
         type: ["4-Wheel Tractor", "Hand Tractor", "Rice Thresher"].includes(newEquipment) ? "heavy" : "light",
+      };
+      auditEntry = {
+        timestamp: new Date(),
+        farmer: entry.farmer,
+        action: "reassign",
+        from: entry.equipment,
+        to: newEquipment,
       };
       toast({
         title: "Equipment Reassigned",
@@ -166,12 +184,20 @@ export function MasterSchedule() {
         time: newStart,
         timeSlot: newSlot,
       };
+      auditEntry = {
+        timestamp: new Date(),
+        farmer: entry.farmer,
+        action: "adjust",
+        from: entry.timeSlot,
+        to: newSlot,
+      };
       toast({
         title: "Time Slot Adjusted",
         description: `${entry.farmer} rescheduled to ${newSlot}`,
       });
     }
 
+    setAuditLog((prev) => [auditEntry, ...prev]);
     setSchedule(updated);
     setResolveOpen(false);
     setResolveIdx(null);
@@ -284,6 +310,50 @@ export function MasterSchedule() {
           </table>
         </div>
       </TooltipProvider>
+
+      {/* Audit Log */}
+      {auditLog.length > 0 && (
+        <div className="mt-6 border-t border-border pt-4">
+          <h3 className="text-sm font-semibold flex items-center gap-2 mb-3 text-muted-foreground">
+            <ScrollText className="h-4 w-4" />
+            Resolution Audit Log
+          </h3>
+          <div className="space-y-2 max-h-48 overflow-y-auto">
+            {auditLog.map((log, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 rounded-md border border-border/50 bg-muted/30 px-3 py-2 text-xs"
+              >
+                <span className="font-mono text-muted-foreground shrink-0 pt-0.5">
+                  {log.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-foreground">{log.farmer}</span>
+                  {" — "}
+                  {log.action === "reassign" ? (
+                    <span>
+                      Equipment changed from{" "}
+                      <span className="font-medium text-destructive line-through">{log.from}</span>
+                      {" → "}
+                      <span className="font-medium text-primary">{log.to}</span>
+                    </span>
+                  ) : (
+                    <span>
+                      Time slot shifted from{" "}
+                      <span className="font-medium text-destructive line-through">{log.from}</span>
+                      {" → "}
+                      <span className="font-medium text-primary">{log.to}</span>
+                    </span>
+                  )}
+                </div>
+                <Badge variant="outline" className={`shrink-0 text-[10px] ${log.action === "reassign" ? "border-primary/30 text-primary" : "border-accent-foreground/30 text-accent-foreground"}`}>
+                  {log.action === "reassign" ? "Reassigned" : "Adjusted"}
+                </Badge>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Resolve Conflict Dialog */}
       <Dialog open={resolveOpen} onOpenChange={setResolveOpen}>
