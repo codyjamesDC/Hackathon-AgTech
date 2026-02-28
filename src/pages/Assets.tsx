@@ -1,65 +1,77 @@
 import { AppSidebar } from "@/components/AppSidebar";
 import { DashboardHeader } from "@/components/DashboardHeader";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { Package, MapPin, Wrench, CheckCircle, AlertTriangle, Clock } from "lucide-react";
-
-type AssetStatus = "Available" | "In Use" | "Maintenance";
+import {
+  Package,
+  MapPin,
+  Wrench,
+  Tractor,
+  Droplets,
+  Wheat,
+  Cog,
+  AlertCircle,
+} from "lucide-react";
 
 interface Asset {
   name: string;
   id: string;
-  status: AssetStatus;
+  icon: typeof Tractor;
   location: string;
-  utilizationPct: number;
+  operatingHrs: number;
+  maxHrs: number;
   lastMaintenance: string;
   totalRentals: number;
 }
 
 const assets: Asset[] = [
-  { name: "4-Wheel Tractor", id: "TRC-001", status: "In Use", location: "Brgy. San Isidro", utilizationPct: 85, lastMaintenance: "2026-02-15", totalRentals: 142 },
-  { name: "4-Wheel Tractor", id: "TRC-002", status: "Available", location: "Coop Yard", utilizationPct: 72, lastMaintenance: "2026-02-20", totalRentals: 118 },
-  { name: "Hand Tractor", id: "HT-001", status: "In Use", location: "Brgy. Mabini", utilizationPct: 68, lastMaintenance: "2026-02-10", totalRentals: 95 },
-  { name: "Hand Tractor", id: "HT-002", status: "Maintenance", location: "Repair Shop", utilizationPct: 45, lastMaintenance: "2026-02-27", totalRentals: 87 },
-  { name: "Water Pump #01", id: "WP-001", status: "Available", location: "Coop Yard", utilizationPct: 55, lastMaintenance: "2026-02-22", totalRentals: 64 },
-  { name: "Water Pump #02", id: "WP-002", status: "In Use", location: "Brgy. Rizal", utilizationPct: 62, lastMaintenance: "2026-02-18", totalRentals: 71 },
-  { name: "Rice Thresher", id: "RT-001", status: "Available", location: "Coop Yard", utilizationPct: 38, lastMaintenance: "2026-02-12", totalRentals: 52 },
-  { name: "Harvester", id: "HV-001", status: "Maintenance", location: "Repair Shop", utilizationPct: 90, lastMaintenance: "2026-02-27", totalRentals: 156 },
+  { name: "Tractor Unit 1", id: "TRC-001", icon: Tractor, location: "Brgy. San Isidro", operatingHrs: 42, maxHrs: 100, lastMaintenance: "2026-02-15", totalRentals: 142 },
+  { name: "Tractor Unit 2", id: "TRC-002", icon: Tractor, location: "Coop Yard", operatingHrs: 78, maxHrs: 100, lastMaintenance: "2026-02-20", totalRentals: 118 },
+  { name: "Combine Harvester A", id: "HV-001", icon: Wheat, location: "Brgy. Mabini", operatingHrs: 95, maxHrs: 100, lastMaintenance: "2026-02-10", totalRentals: 156 },
+  { name: "Hand Tractor", id: "HT-001", icon: Cog, location: "Coop Yard", operatingHrs: 30, maxHrs: 100, lastMaintenance: "2026-02-27", totalRentals: 87 },
+  { name: "Water Pump #01", id: "WP-001", icon: Droplets, location: "Coop Yard", operatingHrs: 55, maxHrs: 100, lastMaintenance: "2026-02-22", totalRentals: 64 },
+  { name: "Water Pump #02", id: "WP-002", icon: Droplets, location: "Brgy. Rizal", operatingHrs: 88, maxHrs: 100, lastMaintenance: "2026-02-18", totalRentals: 71 },
+  { name: "Rice Thresher", id: "RT-001", icon: Wheat, location: "Coop Yard", operatingHrs: 22, maxHrs: 100, lastMaintenance: "2026-02-12", totalRentals: 52 },
+  { name: "Harvester B", id: "HV-002", icon: Wheat, location: "Repair Shop", operatingHrs: 61, maxHrs: 100, lastMaintenance: "2026-02-25", totalRentals: 98 },
 ];
 
-const statusConfig: Record<AssetStatus, { icon: typeof CheckCircle; colorClass: string; badgeClass: string }> = {
-  Available: { icon: CheckCircle, colorClass: "text-primary", badgeClass: "bg-primary/10 text-primary border-primary/20" },
-  "In Use": { icon: Clock, colorClass: "text-warning", badgeClass: "bg-warning/10 text-warning border-warning/20" },
-  Maintenance: { icon: AlertTriangle, colorClass: "text-destructive", badgeClass: "bg-destructive/10 text-destructive border-destructive/20" },
+function getHealthZone(hrs: number, max: number) {
+  const pct = (hrs / max) * 100;
+  if (pct > 90) return "critical";
+  if (pct >= 75) return "warning";
+  return "healthy";
+}
+
+const barColors = {
+  healthy: "[&>div]:bg-primary",
+  warning: "[&>div]:bg-warning",
+  critical: "[&>div]:bg-destructive",
 };
 
 const Assets = () => {
-  const available = assets.filter((a) => a.status === "Available").length;
-  const inUse = assets.filter((a) => a.status === "In Use").length;
-  const maintenance = assets.filter((a) => a.status === "Maintenance").length;
-
   return (
     <div className="flex min-h-screen w-full">
       <AppSidebar />
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader />
         <main className="flex-1 p-6 space-y-6 overflow-auto">
+          {/* Page Header */}
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2.5">
               <Package className="h-6 w-6 text-primary" />
-              <h1 className="text-2xl font-bold">Asset Tracker</h1>
+              <h1 className="text-2xl font-bold">Asset Tracker & Maintenance</h1>
             </div>
-            <p className="text-sm text-muted-foreground mt-0.5">
-              Monitor all cooperative equipment in real-time
+            <p className="text-sm text-muted-foreground mt-1">
+              Monitor equipment health, operating hours, and maintenance readiness
             </p>
           </div>
 
-          {/* Summary row */}
+          {/* Summary */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[
-              { label: "Available", value: available, color: "text-primary" },
-              { label: "In Use", value: inUse, color: "text-warning" },
-              { label: "Maintenance", value: maintenance, color: "text-destructive" },
+              { label: "Total Assets", value: assets.length, color: "text-foreground" },
+              { label: "Healthy", value: assets.filter((a) => getHealthZone(a.operatingHrs, a.maxHrs) === "healthy").length, color: "text-primary" },
+              { label: "Needs Attention", value: assets.filter((a) => getHealthZone(a.operatingHrs, a.maxHrs) !== "healthy").length, color: "text-destructive" },
             ].map((s) => (
               <div key={s.label} className="stat-card animate-slide-up text-center">
                 <p className="text-sm font-medium text-muted-foreground">{s.label}</p>
@@ -68,47 +80,84 @@ const Assets = () => {
             ))}
           </div>
 
-          {/* Asset cards grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+          {/* Equipment Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {assets.map((asset, i) => {
-              const config = statusConfig[asset.status];
-              const StatusIcon = config.icon;
+              const zone = getHealthZone(asset.operatingHrs, asset.maxHrs);
+              const pct = Math.round((asset.operatingHrs / asset.maxHrs) * 100);
+              const Icon = asset.icon;
+
               return (
                 <div
                   key={asset.id}
-                  className="stat-card animate-slide-up"
+                  className="stat-card animate-slide-up flex flex-col"
                   style={{ animationDelay: `${i * 60}ms` }}
                 >
-                  <div className="flex items-start justify-between mb-3">
-                    <div>
-                      <h3 className="font-semibold text-foreground">{asset.name}</h3>
+                  {/* Card Header */}
+                  <div className="flex items-start gap-3 mb-4">
+                    <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-foreground leading-tight">{asset.name}</h3>
                       <p className="text-xs text-muted-foreground font-mono">{asset.id}</p>
                     </div>
-                    <Badge variant="outline" className={`text-xs font-medium ${config.badgeClass}`}>
-                      <StatusIcon className="h-3 w-3 mr-1" />
-                      {asset.status}
-                    </Badge>
                   </div>
 
-                  <div className="space-y-2.5 text-sm">
+                  {/* Details */}
+                  <div className="space-y-2 text-sm mb-4">
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
+                      <MapPin className="h-3.5 w-3.5 shrink-0" />
                       <span>{asset.location}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
-                      <Wrench className="h-3.5 w-3.5" />
+                      <Wrench className="h-3.5 w-3.5 shrink-0" />
                       <span>Last serviced: {asset.lastMaintenance}</span>
                     </div>
-                    <div>
-                      <div className="flex items-center justify-between text-xs mb-1">
-                        <span className="text-muted-foreground">Utilization</span>
-                        <span className="font-semibold text-foreground">{asset.utilizationPct}%</span>
+                    <p className="text-xs text-muted-foreground">{asset.totalRentals} total rentals</p>
+                  </div>
+
+                  {/* Operating Hours Bar */}
+                  <div className="mb-5">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                      <span className="text-muted-foreground font-medium">Operating Hours</span>
+                      <div className="flex items-center gap-1.5">
+                        {zone === "critical" && (
+                          <AlertCircle className="h-3.5 w-3.5 text-destructive animate-pulse" />
+                        )}
+                        <span
+                          className={`font-bold ${
+                            zone === "critical"
+                              ? "text-destructive"
+                              : zone === "warning"
+                              ? "text-warning"
+                              : "text-primary"
+                          }`}
+                        >
+                          {asset.operatingHrs}/{asset.maxHrs} hrs
+                        </span>
                       </div>
-                      <Progress value={asset.utilizationPct} className="h-1.5" />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      {asset.totalRentals} total rentals
-                    </p>
+                    <Progress value={pct} className={`h-2.5 rounded-full ${barColors[zone]}`} />
+                  </div>
+
+                  {/* Card Actions */}
+                  <div className="flex items-center gap-2 mt-auto pt-1">
+                    <Button variant="outline" size="sm" className="flex-1 text-xs h-9">
+                      View Usage Logs
+                    </Button>
+                    {zone === "critical" ? (
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs h-9 bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                      >
+                        Dispatch Maintenance
+                      </Button>
+                    ) : (
+                      <Button size="sm" className="flex-1 text-xs h-9">
+                        Available
+                      </Button>
+                    )}
                   </div>
                 </div>
               );
