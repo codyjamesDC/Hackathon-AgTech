@@ -1,6 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -8,13 +9,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, AlertTriangle } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Search, AlertTriangle, ArrowRightLeft, Clock } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useToast } from "@/hooks/use-toast";
 
 type Status = "In Field" | "Queued" | "Completed";
 type EquipmentType = "all" | "heavy" | "light";
@@ -28,11 +38,25 @@ interface ScheduleEntry {
   type: EquipmentType;
 }
 
-const schedule: ScheduleEntry[] = [
+const allEquipment = [
+  "4-Wheel Tractor",
+  "Hand Tractor",
+  "Water Pump #01",
+  "Water Pump #02",
+  "Rice Thresher",
+];
+
+const initialSchedule: ScheduleEntry[] = [
   { time: "06:00 AM", timeSlot: "06:00 AM – 05:00 PM (Whole Day)", farmer: "JUAN", equipment: "4-Wheel Tractor", status: "In Field", type: "heavy" },
   { time: "08:30 AM", timeSlot: "08:30 AM – 12:00 PM", farmer: "MARIA", equipment: "Water Pump #02", status: "Queued", type: "light" },
   { time: "10:00 AM", timeSlot: "10:00 AM – 02:00 PM", farmer: "PEDRO", equipment: "Hand Tractor", status: "Completed", type: "heavy" },
   { time: "09:00 AM", timeSlot: "09:00 AM – 01:00 PM", farmer: "ELENA", equipment: "4-Wheel Tractor", status: "Queued", type: "heavy" },
+];
+
+const timeOptions = [
+  "06:00 AM", "07:00 AM", "08:00 AM", "09:00 AM", "10:00 AM",
+  "11:00 AM", "12:00 PM", "01:00 PM", "02:00 PM", "03:00 PM",
+  "04:00 PM", "05:00 PM", "06:00 PM",
 ];
 
 function parseTime(t: string): number {
@@ -75,11 +99,24 @@ const statusStyles: Record<Status, string> = {
   Completed: "bg-muted text-muted-foreground border-border",
 };
 
+type ResolveMode = "reassign" | "adjust";
+
 export function MasterSchedule() {
   const [search, setSearch] = useState("");
   const [typeFilter, setTypeFilter] = useState<EquipmentType>("all");
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>(initialSchedule);
 
-  const conflicts = useMemo(() => findConflicts(schedule), []);
+  // Resolution dialog state
+  const [resolveOpen, setResolveOpen] = useState(false);
+  const [resolveIdx, setResolveIdx] = useState<number | null>(null);
+  const [resolveMode, setResolveMode] = useState<ResolveMode>("reassign");
+  const [newEquipment, setNewEquipment] = useState("");
+  const [newStart, setNewStart] = useState("");
+  const [newEnd, setNewEnd] = useState("");
+
+  const { toast } = useToast();
+
+  const conflicts = useMemo(() => findConflicts(schedule), [schedule]);
 
   const filtered = useMemo(() => {
     return schedule.filter((row) => {
@@ -87,7 +124,60 @@ export function MasterSchedule() {
       const matchesType = typeFilter === "all" || row.type === typeFilter;
       return matchesSearch && matchesType;
     });
-  }, [search, typeFilter]);
+  }, [search, typeFilter, schedule]);
+
+  const openResolve = useCallback((originalIdx: number) => {
+    const entry = schedule[originalIdx];
+    setResolveIdx(originalIdx);
+    setNewEquipment(entry.equipment);
+    const range = getSlotRange(entry.timeSlot);
+    if (range) {
+      // find closest time option
+      const findClosest = (mins: number) =>
+        timeOptions.reduce((prev, cur) =>
+          Math.abs(parseTime(cur) - mins) < Math.abs(parseTime(prev) - mins) ? cur : prev
+        );
+      setNewStart(findClosest(range[0]));
+      setNewEnd(findClosest(range[1]));
+    }
+    setResolveMode("reassign");
+    setResolveOpen(true);
+  }, [schedule]);
+
+  const handleResolve = useCallback(() => {
+    if (resolveIdx === null) return;
+    const entry = schedule[resolveIdx];
+    const updated = [...schedule];
+
+    if (resolveMode === "reassign") {
+      updated[resolveIdx] = {
+        ...entry,
+        equipment: newEquipment,
+        type: ["4-Wheel Tractor", "Hand Tractor", "Rice Thresher"].includes(newEquipment) ? "heavy" : "light",
+      };
+      toast({
+        title: "Equipment Reassigned",
+        description: `${entry.farmer} moved to ${newEquipment}`,
+      });
+    } else {
+      const newSlot = `${newStart} – ${newEnd}`;
+      updated[resolveIdx] = {
+        ...entry,
+        time: newStart,
+        timeSlot: newSlot,
+      };
+      toast({
+        title: "Time Slot Adjusted",
+        description: `${entry.farmer} rescheduled to ${newSlot}`,
+      });
+    }
+
+    setSchedule(updated);
+    setResolveOpen(false);
+    setResolveIdx(null);
+  }, [resolveIdx, resolveMode, newEquipment, newStart, newEnd, schedule, toast]);
+
+  const resolveEntry = resolveIdx !== null ? schedule[resolveIdx] : null;
 
   return (
     <div className="stat-card animate-slide-up" style={{ animationDelay: "300ms" }}>
@@ -125,7 +215,8 @@ export function MasterSchedule() {
                 <th className="text-left font-medium py-2.5 pr-4">Time Slot</th>
                 <th className="text-left font-medium py-2.5 pr-4">Farmer</th>
                 <th className="text-left font-medium py-2.5 pr-4">Equipment</th>
-                <th className="text-left font-medium py-2.5">Status</th>
+                <th className="text-left font-medium py-2.5 pr-4">Status</th>
+                <th className="text-left font-medium py-2.5">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -158,7 +249,7 @@ export function MasterSchedule() {
                         </Tooltip>
                       )}
                     </td>
-                    <td className="py-3">
+                    <td className="py-3 pr-4">
                       <Badge
                         variant="outline"
                         className={`text-xs font-medium ${statusStyles[row.status]}`}
@@ -166,12 +257,25 @@ export function MasterSchedule() {
                         {row.status}
                       </Badge>
                     </td>
+                    <td className="py-3">
+                      {hasConflict && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10"
+                          onClick={() => openResolve(originalIdx)}
+                        >
+                          <ArrowRightLeft className="h-3 w-3" />
+                          Resolve
+                        </Button>
+                      )}
+                    </td>
                   </tr>
                 );
               })}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-muted-foreground text-sm">
+                  <td colSpan={6} className="py-8 text-center text-muted-foreground text-sm">
                     No matching schedule entries found.
                   </td>
                 </tr>
@@ -180,6 +284,115 @@ export function MasterSchedule() {
           </table>
         </div>
       </TooltipProvider>
+
+      {/* Resolve Conflict Dialog */}
+      <Dialog open={resolveOpen} onOpenChange={setResolveOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Resolve Conflict
+            </DialogTitle>
+            <DialogDescription>
+              {resolveEntry
+                ? `Fix the scheduling conflict for ${resolveEntry.farmer} — ${resolveEntry.equipment}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+
+          {/* Mode Toggle */}
+          <div className="flex gap-2 mt-2">
+            <Button
+              variant={resolveMode === "reassign" ? "default" : "outline"}
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={() => setResolveMode("reassign")}
+            >
+              <ArrowRightLeft className="h-3.5 w-3.5" />
+              Reassign Equipment
+            </Button>
+            <Button
+              variant={resolveMode === "adjust" ? "default" : "outline"}
+              size="sm"
+              className="flex-1 gap-1.5"
+              onClick={() => setResolveMode("adjust")}
+            >
+              <Clock className="h-3.5 w-3.5" />
+              Adjust Time Slot
+            </Button>
+          </div>
+
+          <div className="space-y-4 pt-2">
+            {resolveMode === "reassign" ? (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground">
+                  New Equipment
+                </label>
+                <Select value={newEquipment} onValueChange={setNewEquipment}>
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {allEquipment
+                      .filter((eq) => resolveEntry ? eq !== resolveEntry.equipment : true)
+                      .map((eq) => (
+                        <SelectItem key={eq} value={eq}>
+                          {eq}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Move this booking to a different piece of equipment to eliminate the overlap.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">Start Time</label>
+                  <Select value={newStart} onValueChange={setNewStart}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeOptions.map((t) => (
+                        <SelectItem key={t} value={t}>{t}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-foreground">End Time</label>
+                  <Select value={newEnd} onValueChange={setNewEnd}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {timeOptions
+                        .filter((t) => parseTime(t) > parseTime(newStart))
+                        .map((t) => (
+                          <SelectItem key={t} value={t}>{t}</SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Shift this booking to a non-overlapping window on the same equipment.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setResolveOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleResolve}>
+              Apply Resolution
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
