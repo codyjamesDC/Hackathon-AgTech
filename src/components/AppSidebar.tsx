@@ -30,7 +30,7 @@ export function AppSidebar() {
       <div className="flex items-center gap-3 px-5 py-6 border-b border-sidebar-border">
         <span className="text-2xl">🚜</span>
         {!collapsed && (
-          <span className="text-lg font-bold tracking-tight">CoopTrack</span>
+          <span className="text-lg font-bold tracking-tight">eBukid</span>
         )}
       </div>
 
