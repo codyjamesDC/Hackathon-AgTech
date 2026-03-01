@@ -10,7 +10,7 @@ interface SmsMessage {
 const messages: SmsMessage[] = [
   {
     sender: "System",
-    content: "✅ Confirmed! TRACTOR booked para kay JUAN sa 03-05. Pupunta si Operator Jun ng 6AM. Text KANSELA TRACTOR 03-05 kung may pagbabago.",
+    content: "✅ Confirmed! TRACTOR booked para kay JUAN sa 03-09. Pupunta si Operator Jun ng 6AM. Text KANSELA TRACTOR 03-05 kung may pagbabago.",
     time: "Just now",
     type: "system",
   },
@@ -22,13 +22,13 @@ const messages: SmsMessage[] = [
   },
   {
     sender: "System",
-    content: "TRACTOR ay maaring hiramin sa petsa ng 03-05-2026 mula 06:00 AM - 05:00 PM. Mag-reply ng YES kung nais magpatuloy. Nakatakdang kunin sa: Brgy. Hall.",
+    content: "TRACTOR ay maaring hiramin sa petsa ng 03-09-2026 mula 06:00 AM - 05:00 PM. Mag-reply ng YES kung nais magpatuloy. Nakatakdang kunin sa: AA Warehouse.",
     time: "2 mins ago",
     type: "system",
   },
   {
     sender: "0919-XXX-1234",
-    content: "HIRAM JUAN TRACTOR 03-05",
+    content: "HIRAM TRACTOR 03-09 JUAN",
     time: "2 mins ago",
     type: "incoming",
   },
