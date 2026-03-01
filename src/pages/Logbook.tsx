@@ -35,22 +35,22 @@ interface LogEntry {
 }
 
 const logData: LogEntry[] = [
-  { txId: "TXN-2026-0282", date: "2026-03-09", farmer: "JUAN", equipment: "Tractor", duration: "11 hrs", revenue: "₱3,300", status: "Booked" },
-  { txId: "TXN-2026-0281", date: "2026-02-28", farmer: "JUAN", equipment: "4-Wheel Tractor", duration: "4 hrs", revenue: "₱1,200", status: "In Use" },
-  { txId: "TXN-2026-0280", date: "2026-02-28", farmer: "MARIA", equipment: "Water Pump #02", duration: "2 hrs", revenue: "₱400", status: "Booked" },
-  { txId: "TXN-2026-0279", date: "2026-02-27", farmer: "PEDRO", equipment: "Hand Tractor", duration: "6 hrs", revenue: "₱1,800", status: "Completed" },
-  { txId: "TXN-2026-0278", date: "2026-02-27", farmer: "ANA", equipment: "Rice Thresher", duration: "3 hrs", revenue: "₱900", status: "Completed" },
-  { txId: "TXN-2026-0277", date: "2026-02-26", farmer: "JOSE", equipment: "4-Wheel Tractor", duration: "8 hrs", revenue: "₱2,400", status: "Cancelled" },
-  { txId: "TXN-2026-0276", date: "2026-02-26", farmer: "ROSA", equipment: "Water Pump #01", duration: "5 hrs", revenue: "₱1,000", status: "Completed" },
-  { txId: "TXN-2026-0275", date: "2026-02-25", farmer: "DIEGO", equipment: "Harvester", duration: "7 hrs", revenue: "₱3,500", status: "Completed" },
-  { txId: "TXN-2026-0274", date: "2026-02-25", farmer: "LITA", equipment: "Hand Tractor", duration: "4 hrs", revenue: "₱1,200", status: "Completed" },
-  { txId: "TXN-2026-0273", date: "2026-02-24", farmer: "CARLOS", equipment: "4-Wheel Tractor", duration: "5 hrs", revenue: "₱1,500", status: "Completed" },
-  { txId: "TXN-2026-0272", date: "2026-02-24", farmer: "ELENA", equipment: "Water Pump #03", duration: "3 hrs", revenue: "₱600", status: "Completed" },
-  { txId: "TXN-2026-0271", date: "2026-02-23", farmer: "RAMON", equipment: "Rice Thresher", duration: "6 hrs", revenue: "₱1,800", status: "Completed" },
-  { txId: "TXN-2026-0270", date: "2026-02-23", farmer: "CONSUELO", equipment: "Harvester", duration: "8 hrs", revenue: "₱4,000", status: "Cancelled" },
-  { txId: "TXN-2026-0269", date: "2026-02-22", farmer: "BERTO", equipment: "Hand Tractor", duration: "3 hrs", revenue: "₱900", status: "Completed" },
-  { txId: "TXN-2026-0268", date: "2026-02-22", farmer: "NENA", equipment: "4-Wheel Tractor", duration: "7 hrs", revenue: "₱2,100", status: "Completed" },
-  { txId: "TXN-2026-0267", date: "2026-02-21", farmer: "TONYO", equipment: "Water Pump #02", duration: "4 hrs", revenue: "₱800", status: "Completed" },
+  { txId: "TXN-2026-0282", date: "2026-03-09", farmer: "JUAN", equipment: "Tractor", duration: "11 hrs", revenue: "₱1,100", status: "Booked" },
+  { txId: "TXN-2026-0281", date: "2026-02-28", farmer: "JUAN", equipment: "4-Wheel Tractor", duration: "4 hrs", revenue: "₱400", status: "Completed" },
+  { txId: "TXN-2026-0280", date: "2026-02-28", farmer: "MARIA", equipment: "Water Pump #02", duration: "2 hrs", revenue: "₱100", status: "Booked" },
+  { txId: "TXN-2026-0279", date: "2026-02-27", farmer: "PEDRO", equipment: "Hand Tractor", duration: "6 hrs", revenue: "₱450", status: "Completed" },
+  { txId: "TXN-2026-0278", date: "2026-02-27", farmer: "ANA", equipment: "Rice Thresher", duration: "3 hrs", revenue: "₱225", status: "Completed" },
+  { txId: "TXN-2026-0277", date: "2026-02-26", farmer: "JOSE", equipment: "4-Wheel Tractor", duration: "8 hrs", revenue: "₱800", status: "Cancelled" },
+  { txId: "TXN-2026-0276", date: "2026-02-26", farmer: "ROSA", equipment: "Water Pump #01", duration: "5 hrs", revenue: "₱250", status: "Completed" },
+  { txId: "TXN-2026-0275", date: "2026-02-25", farmer: "DIEGO", equipment: "Harvester", duration: "7 hrs", revenue: "₱1,050", status: "Completed" },
+  { txId: "TXN-2026-0274", date: "2026-02-25", farmer: "LITA", equipment: "Hand Tractor", duration: "4 hrs", revenue: "₱300", status: "Completed" },
+  { txId: "TXN-2026-0273", date: "2026-02-24", farmer: "CARLOS", equipment: "4-Wheel Tractor", duration: "5 hrs", revenue: "₱500", status: "Completed" },
+  { txId: "TXN-2026-0272", date: "2026-02-24", farmer: "ELENA", equipment: "Water Pump #03", duration: "3 hrs", revenue: "₱150", status: "Completed" },
+  { txId: "TXN-2026-0271", date: "2026-02-23", farmer: "RAMON", equipment: "Rice Thresher", duration: "6 hrs", revenue: "₱375", status: "Completed" },
+  { txId: "TXN-2026-0270", date: "2026-02-23", farmer: "CONSUELO", equipment: "Harvester", duration: "8 hrs", revenue: "₱1,200", status: "Cancelled" },
+  { txId: "TXN-2026-0269", date: "2026-02-22", farmer: "BERTO", equipment: "Hand Tractor", duration: "3 hrs", revenue: "₱225", status: "Completed" },
+  { txId: "TXN-2026-0268", date: "2026-02-22", farmer: "NENA", equipment: "4-Wheel Tractor", duration: "7 hrs", revenue: "₱700", status: "Completed" },
+  { txId: "TXN-2026-0267", date: "2026-02-21", farmer: "TONYO", equipment: "Water Pump #02", duration: "4 hrs", revenue: "₱200", status: "Completed" },
 ];
 
 const statusStyles: Record<LogStatus, string> = {
