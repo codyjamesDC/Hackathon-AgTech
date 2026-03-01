@@ -35,6 +35,7 @@ interface LogEntry {
 }
 
 const logData: LogEntry[] = [
+  { txId: "TXN-2026-0282", date: "2026-03-09", farmer: "JUAN", equipment: "Tractor", duration: "11 hrs", revenue: "₱3,300", status: "Booked" },
   { txId: "TXN-2026-0281", date: "2026-02-28", farmer: "JUAN", equipment: "4-Wheel Tractor", duration: "4 hrs", revenue: "₱1,200", status: "In Use" },
   { txId: "TXN-2026-0280", date: "2026-02-28", farmer: "MARIA", equipment: "Water Pump #02", duration: "2 hrs", revenue: "₱400", status: "Booked" },
   { txId: "TXN-2026-0279", date: "2026-02-27", farmer: "PEDRO", equipment: "Hand Tractor", duration: "6 hrs", revenue: "₱1,800", status: "Completed" },
