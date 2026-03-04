@@ -16,51 +16,54 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { BookOpen, Search, Download, CalendarIcon, ChevronLeft, ChevronRight } from "lucide-react";
-import { useState, useMemo } from "react";
+import { BookOpen, Search, Download, CalendarIcon, ChevronLeft, ChevronRight, Loader2, AlertCircle } from "lucide-react";
+import { useState, useMemo, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
+import { supabase, Transaction } from "@/lib/supabase";
 
-type LogStatus = "Completed" | "Booked" | "In Use" | "Cancelled";
-
-interface LogEntry {
-  txId: string;
-  date: string;
-  farmer: string;
-  equipment: string;
-  duration: string;
-  revenue: string;
-  status: LogStatus;
-}
-
-const logData: LogEntry[] = [
-  { txId: "TXN-2026-0282", date: "2026-03-09", farmer: "JUAN", equipment: "Tractor", duration: "11 hrs", revenue: "₱1,100", status: "Booked" },
-  { txId: "TXN-2026-0281", date: "2026-02-28", farmer: "JUAN", equipment: "4-Wheel Tractor", duration: "4 hrs", revenue: "₱400", status: "Completed" },
-  { txId: "TXN-2026-0280", date: "2026-02-28", farmer: "MARIA", equipment: "Water Pump #02", duration: "2 hrs", revenue: "₱100", status: "Booked" },
-  { txId: "TXN-2026-0279", date: "2026-02-27", farmer: "PEDRO", equipment: "Hand Tractor", duration: "6 hrs", revenue: "₱450", status: "Completed" },
-  { txId: "TXN-2026-0278", date: "2026-02-27", farmer: "ANA", equipment: "Rice Thresher", duration: "3 hrs", revenue: "₱225", status: "Completed" },
-  { txId: "TXN-2026-0277", date: "2026-02-26", farmer: "JOSE", equipment: "4-Wheel Tractor", duration: "8 hrs", revenue: "₱800", status: "Cancelled" },
-  { txId: "TXN-2026-0276", date: "2026-02-26", farmer: "ROSA", equipment: "Water Pump #01", duration: "5 hrs", revenue: "₱250", status: "Completed" },
-  { txId: "TXN-2026-0275", date: "2026-02-25", farmer: "DIEGO", equipment: "Harvester", duration: "7 hrs", revenue: "₱1,050", status: "Completed" },
-  { txId: "TXN-2026-0274", date: "2026-02-25", farmer: "LITA", equipment: "Hand Tractor", duration: "4 hrs", revenue: "₱300", status: "Completed" },
-  { txId: "TXN-2026-0273", date: "2026-02-24", farmer: "CARLOS", equipment: "4-Wheel Tractor", duration: "5 hrs", revenue: "₱500", status: "Completed" },
-  { txId: "TXN-2026-0272", date: "2026-02-24", farmer: "ELENA", equipment: "Water Pump #03", duration: "3 hrs", revenue: "₱150", status: "Completed" },
-  { txId: "TXN-2026-0271", date: "2026-02-23", farmer: "RAMON", equipment: "Rice Thresher", duration: "6 hrs", revenue: "₱375", status: "Completed" },
-  { txId: "TXN-2026-0270", date: "2026-02-23", farmer: "CONSUELO", equipment: "Harvester", duration: "8 hrs", revenue: "₱1,200", status: "Cancelled" },
-  { txId: "TXN-2026-0269", date: "2026-02-22", farmer: "BERTO", equipment: "Hand Tractor", duration: "3 hrs", revenue: "₱225", status: "Completed" },
-  { txId: "TXN-2026-0268", date: "2026-02-22", farmer: "NENA", equipment: "4-Wheel Tractor", duration: "7 hrs", revenue: "₱700", status: "Completed" },
-  { txId: "TXN-2026-0267", date: "2026-02-21", farmer: "TONYO", equipment: "Water Pump #02", duration: "4 hrs", revenue: "₱200", status: "Completed" },
-];
+type LogStatus = "Completed" | "Confirmed" | "Ongoing" | "Cancelled";
 
 const statusStyles: Record<LogStatus, string> = {
-  Completed: "bg-primary/10 text-primary border-primary/20",
-  Booked: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-  "In Use": "bg-warning/10 text-warning border-warning/20",
-  Cancelled: "bg-destructive/10 text-destructive border-destructive/20",
+  Completed:  "bg-primary/10 text-primary border-primary/20",
+  Confirmed:  "bg-blue-500/10 text-blue-600 border-blue-500/20",
+  Ongoing:    "bg-warning/10 text-warning border-warning/20",
+  Cancelled:  "bg-destructive/10 text-destructive border-destructive/20",
 };
 
 const PAGE_SIZE = 10;
+
+async function fetchTransactions(): Promise<Transaction[]> {
+  const { data, error } = await supabase
+    .from("transactions")
+    .select("*, farmers ( alias, full_name ), equipment ( name, type )")
+    .order("created_at", { ascending: false });
+  if (error) throw new Error(error.message);
+  return data as Transaction[];
+}
+
+function exportCSV(rows: Transaction[]) {
+  const headers = ["Transaction ID", "Date", "Farmer Alias", "Equipment", "Duration (days)", "Revenue (PHP)", "Status"];
+  const csvRows = rows.map((r) => [
+    r.id.slice(0, 8).toUpperCase(),
+    r.start_date,
+    r.farmers?.alias ?? "",
+    r.equipment?.name ?? "",
+    r.duration_days,
+    r.revenue ?? 0,
+    r.status,
+  ]);
+  const csv = [headers, ...csvRows].map((row) => row.join(",")).join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `ebukid-logbook-${format(new Date(), "yyyy-MM-dd")}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 const Logbook = () => {
   const [search, setSearch] = useState("");
@@ -68,29 +71,34 @@ const Logbook = () => {
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [page, setPage] = useState(1);
 
+  const { data: transactions = [], isLoading, isError, error } = useQuery({
+    queryKey: ["transactions"],
+    queryFn: fetchTransactions,
+    refetchInterval: 15_000,
+  });
+
   const filtered = useMemo(() => {
-    return logData.filter((entry) => {
+    return transactions.filter((entry) => {
+      const alias = entry.farmers?.alias ?? "";
       const matchesSearch =
-        entry.farmer.toLowerCase().includes(search.toLowerCase()) ||
-        entry.txId.toLowerCase().includes(search.toLowerCase());
+        alias.toLowerCase().includes(search.toLowerCase()) ||
+        entry.id.toLowerCase().includes(search.toLowerCase());
       const matchesStatus = statusFilter === "all" || entry.status === statusFilter;
       let matchesDate = true;
       if (dateRange?.from) {
-        const entryDate = new Date(entry.date);
+        const entryDate = new Date(entry.start_date);
         matchesDate = entryDate >= dateRange.from;
-        if (dateRange.to) {
-          matchesDate = matchesDate && entryDate <= dateRange.to;
-        }
+        if (dateRange.to) matchesDate = matchesDate && entryDate <= dateRange.to;
       }
       return matchesSearch && matchesStatus && matchesDate;
     });
-  }, [search, statusFilter, dateRange]);
+  }, [transactions, search, statusFilter, dateRange]);
+
+  // Reset to page 1 whenever filters change — must be useEffect, NOT inside useMemo
+  useEffect(() => { setPage(1); }, [search, statusFilter, dateRange]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  // Reset to page 1 when filters change
-  useMemo(() => setPage(1), [search, statusFilter, dateRange]);
 
   return (
     <div className="flex min-h-screen w-full">
@@ -98,7 +106,6 @@ const Logbook = () => {
       <div className="flex-1 flex flex-col min-w-0">
         <DashboardHeader />
         <main className="flex-1 p-6 space-y-6 overflow-auto">
-          {/* Page Header */}
           <div className="flex items-start justify-between flex-wrap gap-4">
             <div>
               <div className="flex items-center gap-2.5">
@@ -109,13 +116,16 @@ const Logbook = () => {
                 Complete transaction history for compliance and PhilMech reporting
               </p>
             </div>
-            <Button className="gap-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]">
+            <Button
+              className="gap-2 transition-all duration-200 hover:shadow-lg hover:scale-[1.02]"
+              onClick={() => exportCSV(filtered)}
+              disabled={filtered.length === 0}
+            >
               <Download className="h-4 w-4" />
               Export PhilMech Report (CSV)
             </Button>
           </div>
 
-          {/* Filter Bar */}
           <div className="stat-card animate-slide-up !p-4">
             <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
               <div className="relative flex-1 max-w-xs w-full">
@@ -127,43 +137,24 @@ const Logbook = () => {
                   className="pl-9 h-9 text-sm"
                 />
               </div>
-
-              {/* Date Range Picker */}
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
-                    className={cn(
-                      "h-9 justify-start text-left text-sm font-normal min-w-[220px]",
-                      !dateRange?.from && "text-muted-foreground"
-                    )}
+                    className={cn("h-9 justify-start text-left text-sm font-normal min-w-[220px]", !dateRange?.from && "text-muted-foreground")}
                   >
                     <CalendarIcon className="mr-2 h-4 w-4" />
                     {dateRange?.from ? (
                       dateRange.to ? (
-                        <>
-                          {format(dateRange.from, "MMM d")} – {format(dateRange.to, "MMM d, yyyy")}
-                        </>
-                      ) : (
-                        format(dateRange.from, "PPP")
-                      )
-                    ) : (
-                      <span>Date range</span>
-                    )}
+                        <>{format(dateRange.from, "MMM d")} – {format(dateRange.to, "MMM d, yyyy")}</>
+                      ) : format(dateRange.from, "PPP")
+                    ) : <span>Date range</span>}
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-auto p-0" align="start">
-                  <Calendar
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={setDateRange}
-                    numberOfMonths={2}
-                    initialFocus
-                    className={cn("p-3 pointer-events-auto")}
-                  />
+                  <Calendar mode="range" selected={dateRange} onSelect={setDateRange} numberOfMonths={2} initialFocus className={cn("p-3 pointer-events-auto")} />
                 </PopoverContent>
               </Popover>
-
               <Select value={statusFilter} onValueChange={setStatusFilter}>
                 <SelectTrigger className="w-[150px] h-9 text-sm">
                   <SelectValue placeholder="All Statuses" />
@@ -171,94 +162,84 @@ const Logbook = () => {
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="Completed">Completed</SelectItem>
-                  <SelectItem value="Booked">Booked</SelectItem>
-                  <SelectItem value="In Use">In Use</SelectItem>
+                  <SelectItem value="Confirmed">Confirmed</SelectItem>
+                  <SelectItem value="Ongoing">Ongoing</SelectItem>
                   <SelectItem value="Cancelled">Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
-          {/* Data Table */}
           <div className="bg-card rounded-xl shadow-sm border border-border animate-slide-up" style={{ animationDelay: "100ms" }}>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border">
-                    <th className="text-left font-medium text-muted-foreground py-3 px-5">Transaction ID</th>
-                    <th className="text-left font-medium text-muted-foreground py-3 px-4">Date</th>
-                    <th className="text-left font-medium text-muted-foreground py-3 px-4">Farmer Alias</th>
-                    <th className="text-left font-medium text-muted-foreground py-3 px-4">Equipment</th>
-                    <th className="text-left font-medium text-muted-foreground py-3 px-4">Duration</th>
-                    <th className="text-right font-medium text-muted-foreground py-3 px-4">Revenue</th>
-                    <th className="text-left font-medium text-muted-foreground py-3 px-5">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paged.map((row, i) => (
-                    <tr
-                      key={row.txId}
-                      className="border-b border-border/50 last:border-0 transition-all duration-150 hover:bg-muted/50 hover:shadow-md cursor-pointer"
-                    >
-                      <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">{row.txId}</td>
-                      <td className="py-3.5 px-4 text-muted-foreground">{row.date}</td>
-                      <td className="py-3.5 px-4 font-semibold">{row.farmer}</td>
-                      <td className="py-3.5 px-4">{row.equipment}</td>
-                      <td className="py-3.5 px-4 text-muted-foreground">{row.duration}</td>
-                      <td className="py-3.5 px-4 text-right font-semibold">{row.revenue}</td>
-                      <td className="py-3.5 px-5">
-                        <Badge
-                          variant="outline"
-                          className={`text-xs font-medium rounded-full px-3 ${statusStyles[row.status]}`}
-                        >
-                          {row.status}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))}
-                  {paged.length === 0 && (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-muted-foreground">
-                        No entries match your filters.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Pagination */}
-            <div className="flex items-center justify-between px-5 py-3.5 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                Showing{" "}
-                <span className="font-medium text-foreground">
-                  {filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}
-                </span>{" "}
-                of <span className="font-medium text-foreground">{filtered.length}</span> entries
-              </p>
-              <div className="flex items-center gap-1.5">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1 text-xs"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-3.5 w-3.5" />
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1 text-xs"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Button>
+            {isLoading && (
+              <div className="flex items-center justify-center gap-2 py-16 text-muted-foreground">
+                <Loader2 className="h-5 w-5 animate-spin" />
+                <span className="text-sm">Loading transactions...</span>
               </div>
-            </div>
+            )}
+            {isError && (
+              <div className="flex items-center justify-center gap-2 py-16 text-destructive">
+                <AlertCircle className="h-5 w-5" />
+                <span className="text-sm">Failed to load: {(error as Error).message}</span>
+              </div>
+            )}
+            {!isLoading && !isError && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left font-medium text-muted-foreground py-3 px-5">Transaction ID</th>
+                      <th className="text-left font-medium text-muted-foreground py-3 px-4">Date</th>
+                      <th className="text-left font-medium text-muted-foreground py-3 px-4">Farmer Alias</th>
+                      <th className="text-left font-medium text-muted-foreground py-3 px-4">Equipment</th>
+                      <th className="text-left font-medium text-muted-foreground py-3 px-4">Duration</th>
+                      <th className="text-right font-medium text-muted-foreground py-3 px-4">Revenue</th>
+                      <th className="text-left font-medium text-muted-foreground py-3 px-5">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paged.map((row) => {
+                      const status = row.status as LogStatus;
+                      return (
+                        <tr key={row.id} className="border-b border-border/50 last:border-0 transition-all duration-150 hover:bg-muted/50 hover:shadow-md cursor-pointer">
+                          <td className="py-3.5 px-5 font-mono text-xs text-muted-foreground">{row.id.slice(0, 8).toUpperCase()}</td>
+                          <td className="py-3.5 px-4 text-muted-foreground">{row.start_date}</td>
+                          <td className="py-3.5 px-4 font-semibold">{row.farmers?.alias ?? "—"}</td>
+                          <td className="py-3.5 px-4">{row.equipment?.name ?? "—"}</td>
+                          <td className="py-3.5 px-4 text-muted-foreground">{row.duration_days} {row.duration_days === 1 ? "day" : "days"}</td>
+                          <td className="py-3.5 px-4 text-right font-semibold">
+                            {row.revenue != null ? `₱${row.revenue.toLocaleString("en-PH")}` : "—"}
+                          </td>
+                          <td className="py-3.5 px-5">
+                            <Badge variant="outline" className={`text-xs font-medium rounded-full px-3 ${statusStyles[status] ?? ""}`}>
+                              {row.status}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {paged.length === 0 && (
+                      <tr><td colSpan={7} className="py-12 text-center text-muted-foreground">No entries match your filters.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {!isLoading && !isError && (
+              <div className="flex items-center justify-between px-5 py-3.5 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Showing <span className="font-medium text-foreground">{filtered.length === 0 ? 0 : (page - 1) * PAGE_SIZE + 1}–{Math.min(page * PAGE_SIZE, filtered.length)}</span> of <span className="font-medium text-foreground">{filtered.length}</span> entries
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                    <ChevronLeft className="h-3.5 w-3.5" /> Previous
+                  </Button>
+                  <Button variant="outline" size="sm" className="h-8 gap-1 text-xs" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                    Next <ChevronRight className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              </div>
+            )}
           </div>
         </main>
       </div>
