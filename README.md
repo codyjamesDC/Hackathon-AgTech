@@ -1,4 +1,4 @@
-# 🌾 BUKID (eBukid)
+# 🌾 BUKID (eBUKID)
 
 An SMS-based agricultural equipment management platform designed to bridge the gap between the rural reality of the Philippine farmer and enterprise-grade cooperative efficiency.
 
