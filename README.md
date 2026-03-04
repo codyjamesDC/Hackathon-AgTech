@@ -1,73 +1,46 @@
-# Welcome to your Lovable project
+# 🌾 BUKID (eBukid)
 
-## Project info
+An SMS-based agricultural equipment management platform designed to bridge the gap between the rural reality of the Philippine farmer and enterprise-grade cooperative efficiency.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+---
 
-## How can I edit this code?
+## 📖 The Problem
+Despite 96.23% of farmers agreeing that shared agricultural machinery reduces production costs, Philippine agricultural cooperatives operate under a severe machinery deficit (4.22 tractors per 1,000 hectares vs. the global standard of 10). 
 
-There are several ways of editing your application.
+Because equipment is scarce, cooperatives rely on informal, memory-based, and socially rooted scheduling. This lack of formal digital governance leads to:
+1. **Inequitable Access:** Nearly 50% of farmers are unable to secure machinery during narrow planting windows.
+2. **Asset Decay:** 98% of farmers report anxiety over reactive breakdowns due to a lack of maintenance tracking.
+3. **Compliance Blindspots:** Cooperatives struggle to provide accurate digital logbooks for DA and PhilMech audits.
 
-**Use Lovable**
+## 💡 The Solution: BUKID
+BUKID provides enterprise-grade logistics to cooperatives without requiring the end-user (the farmer) to own a smartphone or have internet access. 
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+By utilizing a forgiving SMS parser, farmers can book heavy machinery using basic keypad phones (e.g., Nokia) in localized Tagalog. The system automatically syncs this SMS data to a cloud-based React dashboard for Cooperative Admins, eliminating manual data entry and double-booking.
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## ⚙️ System Architecture & Features
+1. **Offline-First SMS Booking:** Farmers text a simple syntax (e.g., `HIRAM JUAN TRACTOR 03-05`). The system authenticates, checks availability, and replies in Tagalog.
+2. **Visual Master Schedule:** A real-time, auto-updating web dashboard that translates SMS bookings into blocked calendar slots.
+3. **Automated Digital Logbook:** Every SMS transaction dynamically populates a secure database, allowing admins to export accurate PhilMech/DA compliance reports with one click.
+4. **Predictive Asset Tracker:** Monitors operating hours logged via SMS and automatically flags equipment for maintenance.
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+---
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+## 🛠️ Tech Stack
+This project is built with a modern, high-performance web stack:
+* **Frontend:** React, Vite, TypeScript
+* **Styling & Components:** Tailwind CSS, shadcn-ui
+* **Backend:** Node.js (SMS Webhook & Parser)
+* **Database:** Supabase (PostgreSQL)
 
-Follow these steps:
+---
 
+## 🚀 Getting Started (Local Development)
+
+If you want to run the BUKID admin dashboard locally, the only requirement is having Node.js & npm installed.
+
+**Step 1:** Clone the repository
 ```sh
-# Step 1: Clone the repository using the project's Git URL.
 git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
 cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
-
-**Edit a file directly in GitHub**
-
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
-
-**Use GitHub Codespaces**
-
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
-
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
