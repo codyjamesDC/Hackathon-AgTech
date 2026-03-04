@@ -2,8 +2,6 @@
 
 An SMS-based agricultural equipment management platform designed to bridge the gap between the rural reality of the Philippine farmer and enterprise-grade cooperative efficiency.
 
----
-
 ## 📖 The Problem
 Despite 96.23% of farmers agreeing that shared agricultural machinery reduces production costs, Philippine agricultural cooperatives operate under a severe machinery deficit (4.22 tractors per 1,000 hectares vs. the global standard of 10). 
 
