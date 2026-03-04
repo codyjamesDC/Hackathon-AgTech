@@ -1,7 +1,7 @@
 import { MessageSquare, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
-import { formatDistanceToNow } from "date-fns";
+import { format, isToday, isYesterday } from "date-fns";
 
 interface FeedMessage {
   id: string;
@@ -11,11 +11,20 @@ interface FeedMessage {
   type: "incoming" | "system";
 }
 
+// Shows "Today", "Yesterday", or the actual date — based on start_date
+function formatBookingDate(startDate: string): string {
+  const d = new Date(startDate + "T00:00:00"); // force local date parse
+  if (isToday(d)) return "Today";
+  if (isYesterday(d)) return "Yesterday";
+  return format(d, "MMM d, yyyy");
+}
+
 async function fetchSmsFeed(): Promise<FeedMessage[]> {
   const { data, error } = await supabase
     .from("transactions")
-    .select("id, sms_raw, created_at, status, farmers ( alias, phone_number ), equipment ( name )")
+    .select("id, sms_raw, start_date, created_at, status, farmers ( alias, phone_number ), equipment ( name )")
     .not("sms_raw", "is", null)
+    .order("start_date", { ascending: false })   // sort by booking date, not insert time
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -24,28 +33,30 @@ async function fetchSmsFeed(): Promise<FeedMessage[]> {
   const messages: FeedMessage[] = [];
 
   for (const t of data ?? []) {
-    const timeAgo = formatDistanceToNow(new Date(t.created_at), { addSuffix: true });
-    const phone = t.farmers?.phone_number ?? "Unknown";
-    const alias = t.farmers?.alias ?? "Unknown";
-    const equipment = t.equipment?.name ?? "Unknown";
+    const dateLabel = formatBookingDate(t.start_date);
+    const farmer = t.farmers as any;
+    const equip = t.equipment as any;
+    const phone = farmer?.phone_number ?? "Unknown";
+    const alias = farmer?.alias ?? "Unknown";
+    const equipment = equip?.name ?? "Unknown";
 
-    // Incoming SMS (what the farmer sent)
+    // Incoming SMS bubble
     if (t.sms_raw) {
       messages.push({
         id: `in-${t.id}`,
         sender: phone,
         content: t.sms_raw,
-        time: timeAgo,
+        time: dateLabel,
         type: "incoming",
       });
     }
 
-    // System reply confirmation
+    // System confirmation bubble
     messages.push({
       id: `sys-${t.id}`,
       sender: "System",
-      content: `✅ Kumpirmado! ${equipment} na-book para kay ${alias} sa ${t.created_at.split("T")[0]}. Ref#: ${t.id.slice(0, 8).toUpperCase()}`,
-      time: timeAgo,
+      content: `✅ Kumpirmado! ${equipment} na-book para kay ${alias} sa ${t.start_date}. Ref#: ${t.id.slice(0, 8).toUpperCase()}`,
+      time: dateLabel,
       type: "system",
     });
   }
@@ -80,7 +91,7 @@ export function SmsFeed() {
         </p>
       )}
 
-      <div className="space-y-3 flex-1">
+      <div className="space-y-3 flex-1 overflow-y-auto max-h-[400px]">
         {messages.map((msg) => (
           <div key={msg.id} className="flex flex-col gap-1 rounded-lg p-2 -mx-2 transition-all duration-150 hover:bg-muted/50 hover:shadow-md cursor-pointer">
             <div className="flex items-center justify-between">
