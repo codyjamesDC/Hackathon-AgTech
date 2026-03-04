@@ -21,8 +21,6 @@ By utilizing a forgiving SMS parser, farmers can book heavy machinery using basi
 3. **Automated Digital Logbook:** Every SMS transaction dynamically populates a secure database, allowing admins to export accurate PhilMech/DA compliance reports with one click.
 4. **Predictive Asset Tracker:** Monitors operating hours logged via SMS and automatically flags equipment for maintenance.
 
----
-
 ## 🛠️ Tech Stack
 This project is built with a modern, high-performance web stack:
 * **Frontend:** React, Vite, TypeScript
