@@ -10,13 +10,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Command,
   CommandEmpty,
   CommandGroup,
@@ -32,58 +25,140 @@ import {
   Check,
   ChevronsUpDown,
   Send,
+  Loader2,
 } from "lucide-react";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { supabase, Farmer, Equipment } from "@/lib/supabase";
 
-const farmers = [
-  { label: "JUAN — ID:001", value: "JUAN" },
-  { label: "MARIA — ID:002", value: "MARIA" },
-  { label: "PEDRO — ID:003", value: "PEDRO" },
-  { label: "ANA — ID:004", value: "ANA" },
-  { label: "JOSE — ID:005", value: "JOSE" },
-  { label: "ROSA — ID:006", value: "ROSA" },
-  { label: "DIEGO — ID:007", value: "DIEGO" },
-  { label: "LITA — ID:008", value: "LITA" },
-  { label: "CARLOS — ID:009", value: "CARLOS" },
-  { label: "ELENA — ID:010", value: "ELENA" },
-];
+// ── Supabase fetchers ─────────────────────────────────────────────────────────
 
-const equipmentOptions = [
-  "4-Wheel Tractor",
-  "Hand Tractor",
-  "Water Pump #01",
-  "Water Pump #02",
-  "Rice Thresher",
-  "Harvester",
-  "Combine Harvester A",
-];
+async function fetchFarmers(): Promise<Farmer[]> {
+  const { data, error } = await supabase
+    .from("farmers")
+    .select("*")
+    .order("alias", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as Farmer[];
+}
+
+async function fetchEquipment(): Promise<Equipment[]> {
+  const { data, error } = await supabase
+    .from("equipment")
+    .select("*")
+    .not("status", "eq", "Retired")
+    .order("name", { ascending: true });
+  if (error) throw new Error(error.message);
+  return data as Equipment[];
+}
+
+// ── Insert walk-in booking ────────────────────────────────────────────────────
+
+interface WalkInPayload {
+  farmerId: string;
+  farmerAlias: string;
+  equipmentId: string;
+  equipmentName: string;
+  startDate: Date;
+  forceOverride: boolean;
+}
+
+async function insertWalkIn(payload: WalkInPayload) {
+  const startDateStr = format(payload.startDate, "yyyy-MM-dd");
+  const status = payload.forceOverride ? "Ongoing" : "Confirmed";
+  const smsRaw = `WALK-IN ${payload.equipmentName} ${format(payload.startDate, "MM-dd")} ${payload.farmerAlias}`;
+
+  const { data, error } = await supabase
+    .from("transactions")
+    .insert({
+      farmer_id: payload.farmerId,
+      equipment_id: payload.equipmentId,
+      start_date: startDateStr,
+      duration_days: 1,
+      status,
+      sms_raw: smsRaw,
+    })
+    .select()
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 
 const Override = () => {
   const { toast } = useToast();
-  const [selectedFarmer, setSelectedFarmer] = useState("");
+  const queryClient = useQueryClient();
+
+  const [selectedFarmerId, setSelectedFarmerId] = useState("");
+  const [selectedFarmerAlias, setSelectedFarmerAlias] = useState("");
   const [farmerOpen, setFarmerOpen] = useState(false);
-  const [equipment, setEquipment] = useState("");
+  const [selectedEquipmentId, setSelectedEquipmentId] = useState("");
+  const [selectedEquipmentName, setSelectedEquipmentName] = useState("");
+  const [equipmentOpen, setEquipmentOpen] = useState(false);
   const [targetDate, setTargetDate] = useState<Date | undefined>();
   const [forceOverride, setForceOverride] = useState(false);
 
-  const isValid = selectedFarmer && equipment && targetDate;
+  // ── Live data from Supabase ─────────────────────────────────────────────────
+  const { data: farmers = [], isLoading: farmersLoading } = useQuery({
+    queryKey: ["farmers"],
+    queryFn: fetchFarmers,
+  });
+
+  const { data: equipmentList = [], isLoading: equipmentLoading } = useQuery({
+    queryKey: ["equipment"],
+    queryFn: fetchEquipment,
+  });
+
+  // ── Mutation: insert + invalidate all dashboard queries ────────────────────
+  const mutation = useMutation({
+    mutationFn: insertWalkIn,
+    onSuccess: () => {
+      // Invalidate every query that displays bookings so they all refetch instantly
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      queryClient.invalidateQueries({ queryKey: ["schedule-today"] });
+      queryClient.invalidateQueries({ queryKey: ["sms-feed"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+
+      toast({
+        title: forceOverride ? "⚡ Emergency Override Injected" : "✅ Walk-In Booked Successfully",
+        description: `${selectedFarmerAlias} → ${selectedEquipmentName} on ${format(targetDate!, "PPP")}`,
+      });
+
+      // Reset form
+      setSelectedFarmerId("");
+      setSelectedFarmerAlias("");
+      setSelectedEquipmentId("");
+      setSelectedEquipmentName("");
+      setTargetDate(undefined);
+      setForceOverride(false);
+    },
+    onError: (err: Error) => {
+      toast({
+        title: "❌ Booking Failed",
+        description: err.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const isValid = selectedFarmerId && selectedEquipmentId && targetDate;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!isValid) return;
-
-    toast({
-      title: forceOverride ? "⚡ Emergency Override Injected" : "✅ Queued Successfully",
-      description: `${selectedFarmer} → ${equipment} on ${format(targetDate!, "PPP")}`,
+    mutation.mutate({
+      farmerId: selectedFarmerId,
+      farmerAlias: selectedFarmerAlias,
+      equipmentId: selectedEquipmentId,
+      equipmentName: selectedEquipmentName,
+      startDate: targetDate!,
+      forceOverride,
     });
-
-    setSelectedFarmer("");
-    setEquipment("");
-    setTargetDate(undefined);
-    setForceOverride(false);
   };
 
   return (
@@ -93,6 +168,7 @@ const Override = () => {
         <DashboardHeader />
         <main className="flex-1 p-6 overflow-auto flex justify-center">
           <div className="w-full max-w-2xl space-y-6">
+
             {/* Page Header */}
             <div className="animate-slide-up">
               <div className="flex items-center gap-2.5">
@@ -115,7 +191,8 @@ const Override = () => {
             {/* Form Card */}
             <div className="bg-card rounded-xl shadow-sm border border-border p-6 sm:p-8 animate-slide-up" style={{ animationDelay: "100ms" }}>
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Farmer Select (Searchable) */}
+
+                {/* Farmer Select — live from Supabase */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Registered Farmer Profile</Label>
                   <Popover open={farmerOpen} onOpenChange={setFarmerOpen}>
@@ -125,35 +202,38 @@ const Override = () => {
                         role="combobox"
                         aria-expanded={farmerOpen}
                         className="w-full justify-between h-11 font-normal"
+                        disabled={farmersLoading}
                       >
-                        {selectedFarmer
-                          ? farmers.find((f) => f.value === selectedFarmer)?.label
-                          : "Search or select farmer..."}
+                        {farmersLoading ? (
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Loading farmers...
+                          </span>
+                        ) : selectedFarmerAlias ? (
+                          `${selectedFarmerAlias} — ${farmers.find(f => f.id === selectedFarmerId)?.full_name ?? ""}`
+                        ) : (
+                          "Search or select farmer..."
+                        )}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                       <Command>
-                        <CommandInput placeholder="Search farmer name or ID..." />
+                        <CommandInput placeholder="Search farmer name or alias..." />
                         <CommandList>
                           <CommandEmpty>No farmer found.</CommandEmpty>
                           <CommandGroup>
                             {farmers.map((farmer) => (
                               <CommandItem
-                                key={farmer.value}
-                                value={farmer.label}
+                                key={farmer.id}
+                                value={`${farmer.alias} ${farmer.full_name ?? ""}`}
                                 onSelect={() => {
-                                  setSelectedFarmer(farmer.value);
+                                  setSelectedFarmerId(farmer.id);
+                                  setSelectedFarmerAlias(farmer.alias);
                                   setFarmerOpen(false);
                                 }}
                               >
-                                <Check
-                                  className={cn(
-                                    "mr-2 h-4 w-4",
-                                    selectedFarmer === farmer.value ? "opacity-100" : "opacity-0"
-                                  )}
-                                />
-                                {farmer.label}
+                                <Check className={cn("mr-2 h-4 w-4", selectedFarmerId === farmer.id ? "opacity-100" : "opacity-0")} />
+                                {farmer.alias} — {farmer.full_name ?? farmer.phone_number}
                               </CommandItem>
                             ))}
                           </CommandGroup>
@@ -163,21 +243,63 @@ const Override = () => {
                   </Popover>
                 </div>
 
-                {/* Equipment Select */}
+                {/* Equipment Select — live from Supabase */}
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Requested Equipment</Label>
-                  <Select value={equipment} onValueChange={setEquipment}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue placeholder="Select equipment..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {equipmentOptions.map((eq) => (
-                        <SelectItem key={eq} value={eq}>
-                          {eq}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={equipmentOpen} onOpenChange={setEquipmentOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={equipmentOpen}
+                        className="w-full justify-between h-11 font-normal"
+                        disabled={equipmentLoading}
+                      >
+                        {equipmentLoading ? (
+                          <span className="flex items-center gap-2 text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" /> Loading equipment...
+                          </span>
+                        ) : selectedEquipmentName ? (
+                          selectedEquipmentName
+                        ) : (
+                          "Select equipment..."
+                        )}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search equipment..." />
+                        <CommandList>
+                          <CommandEmpty>No equipment found.</CommandEmpty>
+                          <CommandGroup>
+                            {equipmentList.map((eq) => (
+                              <CommandItem
+                                key={eq.id}
+                                value={eq.name}
+                                onSelect={() => {
+                                  setSelectedEquipmentId(eq.id);
+                                  setSelectedEquipmentName(eq.name);
+                                  setEquipmentOpen(false);
+                                }}
+                                disabled={eq.status === "Under Maintenance"}
+                              >
+                                <Check className={cn("mr-2 h-4 w-4", selectedEquipmentId === eq.id ? "opacity-100" : "opacity-0")} />
+                                <span className="flex-1">{eq.name}</span>
+                                <span className={cn("text-xs ml-2",
+                                  eq.status === "Available" ? "text-primary" :
+                                  eq.status === "Under Maintenance" ? "text-destructive" :
+                                  "text-warning"
+                                )}>
+                                  {eq.status}
+                                </span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 {/* Date Picker */}
@@ -187,10 +309,7 @@ const Override = () => {
                     <PopoverTrigger asChild>
                       <Button
                         variant="outline"
-                        className={cn(
-                          "w-full h-11 justify-start text-left font-normal",
-                          !targetDate && "text-muted-foreground"
-                        )}
+                        className={cn("w-full h-11 justify-start text-left font-normal", !targetDate && "text-muted-foreground")}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {targetDate ? format(targetDate, "PPP") : "Pick a date"}
@@ -215,30 +334,29 @@ const Override = () => {
                     <div className="flex items-center gap-3">
                       <AlertTriangle className="h-5 w-5 text-destructive shrink-0" />
                       <div>
-                        <p className="text-sm font-semibold text-destructive">
-                          Emergency Force Override
-                        </p>
+                        <p className="text-sm font-semibold text-destructive">Emergency Force Override</p>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          Bypass the queue and assign immediately
+                          Bypass the queue and assign immediately (sets status to Ongoing)
                         </p>
                       </div>
                     </div>
-                    <Switch
-                      checked={forceOverride}
-                      onCheckedChange={setForceOverride}
-                    />
+                    <Switch checked={forceOverride} onCheckedChange={setForceOverride} />
                   </div>
                 </div>
 
                 {/* Submit */}
                 <Button
                   type="submit"
-                  disabled={!isValid}
+                  disabled={!isValid || mutation.isPending}
                   className="w-full h-12 text-sm font-semibold gap-2 transition-all duration-200 hover:shadow-lg hover:translate-y-[-2px]"
                 >
-                  <Send className="h-4 w-4" />
-                  Inject into SMS Queue
+                  {mutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" /> Saving...</>
+                  ) : (
+                    <><Send className="h-4 w-4" /> Inject into Queue</>
+                  )}
                 </Button>
+
               </form>
             </div>
           </div>
