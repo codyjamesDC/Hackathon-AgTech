@@ -246,6 +246,9 @@ serve(async (req: Request) => {
       });
     }
 
+    // Equipment status is automatically updated by the DB trigger
+    // (trg_sync_equipment_status) when the transaction row is inserted.
+
     // --- 8. Send confirmation SMS in Tagalog ---
     const displayDate = formatDateTagalog(parsed.startDate);
     const displayName = farmer.full_name ?? farmer.alias;
