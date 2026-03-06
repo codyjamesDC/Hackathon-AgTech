@@ -8,7 +8,7 @@ import {
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
 } from "@/components/ui/dialog";
-import { Search, AlertTriangle, ArrowRightLeft, Clock, ScrollText, Loader2, AlertCircle } from "lucide-react";
+import { Search, AlertTriangle, ArrowRightLeft, Clock, ScrollText, Loader2, AlertCircle, PlayCircle, CheckCircle2 } from "lucide-react";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
@@ -126,9 +126,15 @@ async function fetchTodaySchedule(): Promise<ScheduleEntry[]> {
   }));
 }
 
-async function fetchAllEquipment(): Promise<string[]> {
-  const { data } = await supabase.from("equipment").select("name").eq("status", "Available");
-  return (data ?? []).map((e: any) => e.name);
+interface EquipmentOption { id: string; name: string; }
+
+async function fetchAllEquipment(): Promise<EquipmentOption[]> {
+  const { data } = await supabase
+    .from("equipment")
+    .select("id, name")
+    .not("status", "in", '("Under Maintenance","Retired")')
+    .order("name", { ascending: true });
+  return (data ?? []).map((e: any) => ({ id: e.id, name: e.name }));
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -153,22 +159,42 @@ export function MasterSchedule() {
     refetchInterval: 15_000,
   });
 
-  const { data: allEquipment = [] } = useQuery({
+  const { data: allEquipment = [] } = useQuery<EquipmentOption[]>({
     queryKey: ["equipment-names"],
     queryFn: fetchAllEquipment,
   });
 
-  // Mutation: reassign equipment on a transaction
+  // Mutation: reassign equipment on a transaction (uses id directly — no second lookup)
   const reassignMutation = useMutation({
-    mutationFn: async ({ txId, equipmentName }: { txId: string; equipmentName: string }) => {
-      const { data: eq } = await supabase
-        .from("equipment").select("id").ilike("name", equipmentName).single();
-      if (!eq) throw new Error("Equipment not found");
+    mutationFn: async ({ txId, equipmentId }: { txId: string; equipmentId: string }) => {
       const { error } = await supabase
-        .from("transactions").update({ equipment_id: eq.id }).eq("id", txId);
+        .from("transactions").update({ equipment_id: equipmentId }).eq("id", txId);
       if (error) throw new Error(error.message);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["schedule-today"] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["schedule-today"] });
+      queryClient.invalidateQueries({ queryKey: ["equipment-names"] });
+    },
+  });
+
+  // Mutation: advance transaction status (Queued → In Field → Completed)
+  const advanceStatusMutation = useMutation({
+    mutationFn: async ({ txId, newStatus }: { txId: string; newStatus: "Ongoing" | "Completed" }) => {
+      const { error } = await supabase
+        .from("transactions")
+        .update({ status: newStatus })
+        .eq("id", txId);
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: (_, { newStatus }) => {
+      queryClient.invalidateQueries({ queryKey: ["schedule-today"] });
+      queryClient.invalidateQueries({ queryKey: ["metrics"] });
+      queryClient.invalidateQueries({ queryKey: ["assets"] });
+      toast({
+        title: newStatus === "Ongoing" ? "🚜 Marked as In Field" : "✅ Marked as Completed",
+        description: newStatus === "Completed" ? "Equipment is now available again." : undefined,
+      });
+    },
   });
 
   const conflicts = useMemo(() => findConflicts(schedule), [schedule]);
@@ -185,7 +211,7 @@ export function MasterSchedule() {
     const entry = schedule.find((s) => s.id === id);
     if (!entry) return;
     setResolveId(id);
-    setNewEquipment(entry.equipment);
+    setNewEquipment(entry.equipmentId);
     setNewStart("06:00 AM");
     setNewEnd("05:00 PM");
     setResolveMode("reassign");
@@ -198,12 +224,13 @@ export function MasterSchedule() {
     if (!entry) return;
 
     if (resolveMode === "reassign") {
-      await reassignMutation.mutateAsync({ txId: resolveId, equipmentName: newEquipment });
+      const selectedEquip = allEquipment.find((e) => e.id === newEquipment);
+      await reassignMutation.mutateAsync({ txId: resolveId, equipmentId: newEquipment });
       setAuditLog((prev) => [{
         timestamp: new Date(), farmer: entry.farmer,
-        action: "reassign", from: entry.equipment, to: newEquipment,
+        action: "reassign", from: entry.equipment, to: selectedEquip?.name ?? newEquipment,
       }, ...prev]);
-      toast({ title: "Equipment Reassigned", description: `${entry.farmer} moved to ${newEquipment}` });
+      toast({ title: "Equipment Reassigned", description: `${entry.farmer} moved to ${selectedEquip?.name ?? newEquipment}` });
     } else {
       const newSlot = `${newStart} – ${newEnd}`;
       setAuditLog((prev) => [{
@@ -268,6 +295,7 @@ export function MasterSchedule() {
                   const originalIdx = schedule.indexOf(row);
                   const rowConflicts = conflicts.get(originalIdx);
                   const hasConflict = !!rowConflicts;
+                  const isPending = advanceStatusMutation.isPending;
                   return (
                     <tr key={row.id} className={`border-b border-border/50 last:border-0 transition-all duration-150 hover:bg-muted/50 hover:shadow-md cursor-pointer ${hasConflict ? "bg-destructive/5" : ""}`}>
                       <td className="py-3 pr-4 font-mono text-xs text-muted-foreground">{row.time}</td>
@@ -288,11 +316,48 @@ export function MasterSchedule() {
                         <Badge variant="outline" className={`text-xs font-medium ${statusStyles[row.status]}`}>{row.status}</Badge>
                       </td>
                       <td className="py-3">
-                        {hasConflict && (
-                          <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => openResolve(row.id)}>
-                            <ArrowRightLeft className="h-3 w-3" /> Resolve
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {/* Queued → In Field */}
+                          {row.status === "Queued" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1 border-primary/30 text-primary hover:bg-primary/10"
+                                  disabled={isPending}
+                                  onClick={() => advanceStatusMutation.mutate({ txId: row.id, newStatus: "Ongoing" })}
+                                >
+                                  <PlayCircle className="h-3 w-3" /> Start
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Mark as In Field</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {/* In Field → Completed */}
+                          {row.status === "In Field" && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-7 text-xs gap-1 border-green-500/30 text-green-600 hover:bg-green-500/10"
+                                  disabled={isPending}
+                                  onClick={() => advanceStatusMutation.mutate({ txId: row.id, newStatus: "Completed" })}
+                                >
+                                  <CheckCircle2 className="h-3 w-3" /> Done
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top" className="text-xs">Mark as Completed</TooltipContent>
+                            </Tooltip>
+                          )}
+                          {/* Conflict resolve */}
+                          {hasConflict && (
+                            <Button variant="outline" size="sm" className="h-7 text-xs gap-1 border-destructive/30 text-destructive hover:bg-destructive/10" onClick={() => openResolve(row.id)}>
+                              <ArrowRightLeft className="h-3 w-3" /> Resolve
+                            </Button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -359,8 +424,8 @@ export function MasterSchedule() {
                 <Select value={newEquipment} onValueChange={setNewEquipment}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {allEquipment.filter((eq) => resolveEntry ? eq !== resolveEntry.equipment : true).map((eq) => (
-                      <SelectItem key={eq} value={eq}>{eq}</SelectItem>
+                    {allEquipment.filter((eq) => resolveEntry ? eq.id !== resolveEntry.equipmentId : true).map((eq) => (
+                      <SelectItem key={eq.id} value={eq.id}>{eq.name}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
