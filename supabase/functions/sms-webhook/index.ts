@@ -1,3 +1,5 @@
+// @ts-ignore: Deno runtime types
+/// <reference types="https://deno.land/x/deno/cli/tsc/dts/lib.deno.d.ts" />
 // supabase/functions/sms-webhook/index.ts
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -163,10 +165,10 @@ serve(async (req: Request) => {
     }
 
     // --- 3. Initialize Supabase client ---
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SERVICE_ROLE_KEY') ?? '' // Use the renamed key here
-    )
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
     // --- 4. Look up Farmer by alias (case-insensitive) ---
     const { data: farmer, error: farmerError } = await supabase
@@ -207,26 +209,69 @@ serve(async (req: Request) => {
     }
 
     // --- 6. Check equipment availability ---
-    if (equipment.status === "Under Maintenance" || equipment.status === "Retired") {
+    // Block if not explicitly "Available" — covers In Use, Under Maintenance, Retired, or any other status
+    if (equipment.status !== "Available") {
+      const reason =
+        equipment.status === "Retired"          ? "hindi na available (retired)" :
+        equipment.status === "Under Maintenance" ? "nasa pagpapaayos" :
+        equipment.status === "In Use / Hiram"    ? "kasalukuyang ginagamit ng ibang magsasaka" :
+                                                   "hindi available sa ngayon";
       await sendSMS(
         senderPhone,
-        `Paumanhin, ang ${equipment.name} ay kasalukuyang ` +
-        `${equipment.status === "Retired" ? "hindi na available" : "nasa pagpapaayos"}. ` +
-        "Makipag-ugnayan sa inyong barangay technician."
+        `Paumanhin, ang ${equipment.name} ay ${reason}. ` +
+        "Makipag-ugnayan sa inyong barangay technician para sa alternatibo."
       );
-      return new Response(JSON.stringify({ error: "Equipment unavailable" }), {
+      return new Response(JSON.stringify({ error: `Equipment unavailable: ${equipment.status}` }), {
         status: 200,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    // --- 7. Insert into Transactions ---
+    // --- 7. Check for date conflicts on this equipment ---
+    const endDate = new Date(parsed.startDate);
+    endDate.setDate(endDate.getDate() + parsed.durationDays - 1);
+    const endDateStr = endDate.toISOString().split("T")[0];
+
+    const { data: conflicts, error: conflictError } = await supabase
+      .from("transactions")
+      .select("id, start_date, end_date, farmers ( alias )")
+      .eq("equipment_id", equipment.id)
+      .in("status", ["Confirmed", "Ongoing"])
+      .lte("start_date", endDateStr)
+      .gte("end_date", parsed.startDate);
+
+    if (conflictError) {
+      console.error("Conflict check error:", conflictError);
+    }
+
+    if (conflicts && conflicts.length > 0) {
+      const clash = conflicts[0] as any;
+      const clashFarmer = clash.farmers?.alias ?? "ibang magsasaka";
+      const clashDate = formatDateTagalog(clash.start_date);
+      await sendSMS(
+        senderPhone,
+        `Paumanhin, ang ${equipment.name} ay nakalaan na para kay ${clashFarmer} ` +
+        `simula ${clashDate}. Pumili ng ibang petsa o kagamitan.`
+      );
+      return new Response(JSON.stringify({ error: "Equipment already booked for that date" }), {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // --- 8. Insert into Transactions ---
+    // Compute end_date explicitly so conflict queries always have it populated
+    const insertEndDate = new Date(parsed.startDate);
+    insertEndDate.setDate(insertEndDate.getDate() + parsed.durationDays - 1);
+    const insertEndDateStr = insertEndDate.toISOString().split("T")[0];
+
     const { data: transaction, error: insertError } = await supabase
       .from("transactions")
       .insert({
         farmer_id: farmer.id,
         equipment_id: equipment.id,
         start_date: parsed.startDate,
+        end_date: insertEndDateStr,
         duration_days: parsed.durationDays,
         status: "Confirmed",
         sms_raw: rawMessage,
@@ -249,7 +294,7 @@ serve(async (req: Request) => {
     // Equipment status is automatically updated by the DB trigger
     // (trg_sync_equipment_status) when the transaction row is inserted.
 
-    // --- 8. Send confirmation SMS in Tagalog ---
+    // --- 9. Send confirmation SMS in Tagalog ---
     const displayDate = formatDateTagalog(parsed.startDate);
     const displayName = farmer.full_name ?? farmer.alias;
     const daysText = parsed.durationDays === 1
