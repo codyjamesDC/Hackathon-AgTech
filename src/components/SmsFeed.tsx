@@ -12,11 +12,12 @@ interface FeedMessage {
 }
 
 // Shows "Today", "Yesterday", or the actual date — based on start_date
-function formatBookingDate(startDate: string): string {
-  const d = new Date(startDate + "T00:00:00"); // force local date parse
-  if (isToday(d)) return "Today";
-  if (isYesterday(d)) return "Yesterday";
-  return format(d, "MMM d, yyyy");
+function formatBookingDate(createdAt: string): string {
+  const d = new Date(createdAt);
+  const timeStr = format(d, "h:mm a");
+  if (isToday(d)) return `Today ${timeStr}`;
+  if (isYesterday(d)) return `Yesterday ${timeStr}`;
+  return format(d, "MMM d, yyyy · h:mm a");
 }
 
 async function fetchSmsFeed(): Promise<FeedMessage[]> {
@@ -24,7 +25,6 @@ async function fetchSmsFeed(): Promise<FeedMessage[]> {
     .from("transactions")
     .select("id, sms_raw, start_date, created_at, status, farmers ( alias, phone_number ), equipment ( name )")
     .not("sms_raw", "is", null)
-    .order("start_date", { ascending: false })   // sort by booking date, not insert time
     .order("created_at", { ascending: false })
     .limit(10);
 
@@ -33,7 +33,7 @@ async function fetchSmsFeed(): Promise<FeedMessage[]> {
   const messages: FeedMessage[] = [];
 
   for (const t of data ?? []) {
-    const dateLabel = formatBookingDate(t.start_date);
+    const dateLabel = formatBookingDate(t.created_at);
     const farmer = t.farmers as any;
     const equip = t.equipment as any;
     const phone = farmer?.phone_number ?? "Unknown";
