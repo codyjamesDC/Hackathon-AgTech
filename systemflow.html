@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>BUKID – App Flow</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+            body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f4f6f0;
+            color: #1a2e0f;
+            padding: 40px 20px;
+            min-height: 100vh;
+            }
+
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #2d5016;
+            margin-bottom: 4px;
+            }
+            .subtitle {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #5a7a3a;
+            margin-bottom: 40px;
+            }
+
+            .flow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            max-width: 720px;
+            margin: 0 auto;
+            }
+
+            /* ── Sections ── */
+            .section-label {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 28px 0 8px;
+            }
+            .section-label span {
+            font-size: 0.7rem;
+            font-weight: 700;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #7a9a52;
+            white-space: nowrap;
+            }
+            .section-label hr {
+            flex: 1;
+            border: none;
+            border-top: 1px dashed #b8d08a;
+            }
+
+            /* ── Nodes ── */
+            .node {
+            display: flex;
+            align-items: flex-start;
+            gap: 14px;
+            background: #fff;
+            border: 1.5px solid #d4e8b0;
+            border-radius: 14px;
+            padding: 16px 20px;
+            width: 100%;
+            box-shadow: 0 2px 8px rgba(60,100,20,0.07);
+            transition: box-shadow 0.2s, transform 0.2s;
+            cursor: default;
+            }
+            .node:hover {
+            box-shadow: 0 6px 20px rgba(60,100,20,0.13);
+            transform: translateY(-2px);
+            }
+
+            .node.highlight {
+            background: #edf7e0;
+            border-color: #6aab2a;
+            }
+            .node.error {
+            background: #fff5f5;
+            border-color: #f0a0a0;
+            }
+            .node.admin {
+            background: #f0f4ff;
+            border-color: #a0b4f0;
+            }
+
+            .icon {
+            font-size: 1.6rem;
+            line-height: 1;
+            flex-shrink: 0;
+            margin-top: 2px;
+            }
+            .node-body h3 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #1e3a08;
+            margin-bottom: 3px;
+            }
+            .node-body p {
+            font-size: 0.82rem;
+            color: #4a6630;
+            line-height: 1.5;
+            }
+            .node-body code {
+            background: #e8f5d0;
+            border-radius: 4px;
+            padding: 1px 6px;
+            font-size: 0.8rem;
+            color: #2d5016;
+            font-family: 'Courier New', monospace;
+            }
+
+            /* ── Arrows ── */
+            .arrow {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0;
+            margin: 2px 0;
+            }
+            .arrow-line {
+            width: 2px;
+            height: 28px;
+            background: #8aba4a;
+            }
+            .arrow-head {
+            width: 0;
+            height: 0;
+            border-left: 7px solid transparent;
+            border-right: 7px solid transparent;
+            border-top: 10px solid #8aba4a;
+            }
+            .arrow-label {
+            font-size: 0.7rem;
+            color: #7a9a52;
+            font-weight: 600;
+            margin-top: 2px;
+            }
+
+            /* ── Branch ── */
+            .branch {
+            display: flex;
+            gap: 20px;
+            width: 100%;
+            margin: 4px 0;
+            }
+            .branch-side {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            }
+            .branch-label {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #fff;
+            background: #8aba4a;
+            border-radius: 20px;
+            padding: 2px 12px;
+            }
+            .branch-label.no { background: #e07070; }
+
+            /* ── DB badge ── */
+            .db-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #e8f0ff;
+            border: 1px solid #aac0f0;
+            border-radius: 20px;
+            padding: 3px 10px;
+            font-size: 0.72rem;
+            color: #3050a0;
+            font-weight: 600;
+            margin-top: 4px;
+            }
+
+            /* ── Legend ── */
+            .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+            justify-content: center;
+            margin-top: 40px;
+            padding: 16px 20px;
+            background: #fff;
+            border-radius: 12px;
+            border: 1px solid #d4e8b0;
+            max-width: 720px;
+            margin-left: auto;
+            margin-right: auto;
+            }
+            .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            font-size: 0.78rem;
+            color: #4a6630;
+            }
+            .legend-dot {
+            width: 14px; height: 14px;
+            border-radius: 4px;
+            border: 1.5px solid;
+            }
+        </style>
+    </head>
+    <body>
+
+        <h1>🌾 BUKID — System Flow</h1>
+        <p class="subtitle">SMS-based agricultural equipment management for Philippine cooperatives</p>
+
+        <div class="flow">
+
+            <!-- FARMER SIDE -->
+            <div class="section-label"><hr><span>📱 Farmer (Basic Phone)</span><hr></div>
+
+            <div class="node highlight">
+            <div class="icon">👨‍🌾</div>
+            <div class="node-body">
+                <h3>Farmer Sends SMS</h3>
+                <p>Farmer uses any basic keypad phone to text a booking request in Tagalog format:<br>
+                <code>HIRAM JUAN TRACTOR 03-05</code></p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">via Semaphore SMS Gateway</span></div>
+
+            <!-- BACKEND -->
+            <div class="section-label"><hr><span>⚙️ Backend — Node.js SMS Webhook</span><hr></div>
+
+            <div class="node">
+            <div class="icon">📨</div>
+            <div class="node-body">
+                <h3>SMS Webhook Receives Message</h3>
+                <p>Semaphore forwards the inbound SMS as a POST request to the Supabase Edge Function (<code>/sms-webhook</code>).</p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+            <div class="node">
+            <div class="icon">🔍</div>
+            <div class="node-body">
+                <h3>SMS Parser</h3>
+                <p>A forgiving Tagalog parser extracts:<br>
+                <code>alias</code> · <code>equipment name</code> · <code>start date</code> · <code>duration (days)</code></p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">if format invalid → reply with help message</span></div>
+
+            <!-- VALIDATION BRANCH -->
+            <div class="node">
+            <div class="icon">✅</div>
+            <div class="node-body">
+                <h3>Validate Farmer & Equipment</h3>
+                <p>Looks up farmer alias and equipment name in Supabase (case-insensitive). Checks equipment status (<code>Active</code> / <code>Under Maintenance</code> / <code>Retired</code>).</p>
+                <span class="db-badge">🗄️ Supabase PostgreSQL</span>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+            <!-- BRANCH -->
+            <div style="width:100%;display:flex;flex-direction:column;align-items:center;">
+            <div style="font-size:0.78rem;color:#5a7a3a;font-weight:700;margin-bottom:6px;">Availability check</div>
+            <div class="branch">
+                <div class="branch-side">
+                <span class="branch-label">✅ Available</span>
+                <div class="node highlight">
+                    <div class="icon">📋</div>
+                    <div class="node-body">
+                    <h3>Create Transaction</h3>
+                    <p>Booking inserted into <code>transactions</code> table with status <code>Confirmed</code>. Operating hours logged for asset tracker.</p>
+                    <span class="db-badge">🗄️ Supabase PostgreSQL</span>
+                    </div>
+                </div>
+                <div style="width:2px;height:18px;background:#8aba4a;"></div>
+                <div class="node highlight">
+                    <div class="icon">💬</div>
+                    <div class="node-body">
+                    <h3>Send Tagalog Confirmation</h3>
+                    <p>Farmer receives SMS reply with equipment name, date, duration, fee & reference number.<br>
+                    <code>Ref#: A1B2C3D4</code></p>
+                    </div>
+                </div>
+                </div>
+                <div class="branch-side">
+                <span class="branch-label no">❌ Unavailable</span>
+                <div class="node error">
+                    <div class="icon">🚫</div>
+                    <div class="node-body">
+                    <h3>Send Error Reply</h3>
+                    <p>Farmer gets an SMS explaining the equipment is under maintenance or retired, and is advised to contact the barangay technician.</p>
+                    </div>
+                </div>
+                </div>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div><span class="arrow-label">synced to dashboard in real-time</span></div>
+
+            <!-- ADMIN DASHBOARD -->
+            <div class="section-label"><hr><span>🖥️ Admin Dashboard — React Web App</span><hr></div>
+
+            <div class="node admin">
+            <div class="icon">📅</div>
+            <div class="node-body">
+                <h3>Visual Master Schedule</h3>
+                <p>Cooperative admin sees all SMS bookings auto-rendered as blocked calendar slots. Polls Supabase every 10s for live updates.</p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+            <div class="node admin">
+            <div class="icon">📡</div>
+            <div class="node-body">
+                <h3>Live SMS Feed</h3>
+                <p>Dashboard shows a real-time feed of incoming farmer texts and system confirmation replies, auto-refreshing every 10 seconds.</p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+            <div class="node admin">
+            <div class="icon">🔧</div>
+            <div class="node-body">
+                <h3>Predictive Asset Tracker</h3>
+                <p>Monitors cumulative operating hours per machine from transaction logs. Flags equipment approaching maintenance thresholds automatically.</p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+            <div class="node admin">
+            <div class="icon">📝</div>
+            <div class="node-body">
+                <h3>Manual Walk-In Entry (Override)</h3>
+                <p>Admin can manually register offline walk-in farmer requests directly into the digital queue. All entries are logged in the audit trail.</p>
+            </div>
+            </div>
+
+            <div class="arrow"><div class="arrow-line"></div><div class="arrow-head"></div></div>
+
+            <div class="node admin">
+            <div class="icon">📊</div>
+            <div class="node-body">
+                <h3>Digital Logbook & Compliance Export</h3>
+                <p>Every transaction auto-populates the logbook. Admin can export accurate PhilMech / DA compliance reports with a single click.</p>
+                <span class="db-badge">🗄️ Supabase PostgreSQL</span>
+            </div>
+            </div>
+
+        </div>
+
+        <!-- Legend -->
+        <div class="legend">
+            <div class="legend-item"><div class="legend-dot" style="background:#edf7e0;border-color:#6aab2a;"></div> Farmer / Success path</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#fff5f5;border-color:#f0a0a0;"></div> Error / Unavailable path</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#f0f4ff;border-color:#a0b4f0;"></div> Admin dashboard</div>
+            <div class="legend-item"><div class="legend-dot" style="background:#fff;border-color:#d4e8b0;"></div> Backend processing</div>
+        </div>
+
+    </body>
+</html>
