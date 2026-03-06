@@ -33,7 +33,7 @@ async function fetchSmsFeed(): Promise<FeedMessage[]> {
   const messages: FeedMessage[] = [];
 
   for (const t of data ?? []) {
-    const dateLabel = formatBookingDate(t.start_date);
+    const dateLabel = formatBookingDate(t.created_at);
     const farmer = t.farmers as any;
     const equip = t.equipment as any;
     const phone = farmer?.phone_number ?? "Unknown";
