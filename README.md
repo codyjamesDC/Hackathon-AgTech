@@ -16,7 +16,7 @@ BUKID provides enterprise-grade logistics to cooperatives without requiring the 
 By utilizing a forgiving SMS parser, farmers can book heavy machinery using basic keypad phones (e.g., Nokia) in localized Tagalog. The system automatically syncs this SMS data to a cloud-based React dashboard for Cooperative Admins, eliminating manual data entry and double-booking.
 
 ## ⚙️ System Architecture & Features
-1. **Offline-First SMS Booking:** Farmers text a simple syntax (e.g., `HIRAM JUAN TRACTOR 03-05`). The system authenticates, checks availability, and replies in Tagalog.
+1. **Offline-First SMS Booking:** Farmers text a simple syntax (e.g., `HIRAM TRACTOR 03-05 JUAN`). The system authenticates, checks availability, and replies in Tagalog.
 2. **Visual Master Schedule:** A real-time, auto-updating web dashboard that translates SMS bookings into blocked calendar slots.
 3. **Automated Digital Logbook:** Every SMS transaction dynamically populates a secure database, allowing admins to export accurate PhilMech/DA compliance reports with one click.
 4. **Predictive Asset Tracker:** Monitors operating hours logged via SMS and automatically flags equipment for maintenance.
