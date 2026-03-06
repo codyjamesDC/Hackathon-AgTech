@@ -4,6 +4,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/supabase";
 import { useState } from "react";
 
+// Fetch Metrics
+// runs the supabase queries in parallel and computes four numbers for the dashboard cards (available equipment today, etc.)
 async function fetchMetrics() {
   const today = new Date().toISOString().split("T")[0];
 
@@ -53,6 +55,7 @@ async function fetchMetrics() {
   return { activeToday, available, total, maintenance, rentalHistory: days };
 }
 
+// CustomToolTip
 function CustomTooltip({ active, payload, label, unit }: any) {
   if (!active || !payload?.length) return null;
   return (
@@ -63,6 +66,7 @@ function CustomTooltip({ active, payload, label, unit }: any) {
   );
 }
 
+// TrendBadge
 function TrendBadge({ data }: { data: { v: number }[] }) {
   if (data.length < 2) return null;
   const last = data[data.length - 1].v;
@@ -84,6 +88,7 @@ function TrendBadge({ data }: { data: { v: number }[] }) {
   );
 }
 
+// Synchronous MetricsRow
 export function MetricsRow() {
   const [hoveredCard, setHoveredCard] = useState<string | null>(null);
 
@@ -120,7 +125,7 @@ export function MetricsRow() {
       unit: "rentals",
     },
     {
-      title: "Available Equipment",
+      title: "Available Equipment Today",
       value: isLoading ? "…" : String(data?.available ?? 0),
       icon: Package,
       change: isLoading ? "" : `of ${data?.total ?? 0} total units`,
